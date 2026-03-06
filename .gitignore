@@ -1,0 +1,21 @@
+# VH container files (large binary files)
+*.vh
+*.vh-shm
+*.vh-wal
+
+# Extracted media files
+*.opus
+*.jpg
+*.png
+*.mp4
+*.mkv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
