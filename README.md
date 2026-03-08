@@ -171,6 +171,37 @@ Each annotation card shows the timestamp, frame number, all key-value pairs with
 
 For AI pipelines, this means your video, its labels, its analysis results, and its supporting documents are **one portable file** — no folder structures, no sidecar JSONs, no separate databases.
 
+### Import Images from Any Source
+
+Turn any collection of images into a VH video — photos from a camera, AI-generated images from DALL-E / Midjourney / Stable Diffusion, screenshots, medical scans, satellite imagery, or anything else.
+
+```bash
+# Directory of images → VH video
+vh import-images ./photos/ -o album.vh --fps 24
+
+# Slideshow with 3 seconds per image
+vh import-images ./ai-generated/ -o slideshow.vh --duration 3
+
+# Resize all images to 1080p and tag with source filenames
+vh import-images ./renders/ -o output.vh --resize 1920x1080 --annotate-source
+
+# Single image
+vh import-images photo.jpg -o single.vh
+
+# Then play, annotate, search, or export like any VH file
+vh viewer output.vh
+vh export output.vh -o output.mp4
+```
+
+**Supported formats:** JPG, PNG, WebP, BMP, TIFF, GIF. Identical consecutive images are automatically deduplicated.
+
+**The workflow:**
+1. Generate or collect images from **any source** (AI models, cameras, scripts, APIs)
+2. `vh import-images` assembles them into a `.vh` file with frame-level random access
+3. Annotate, attach documents, search, analyze with AI, or export to MP4
+
+This makes VH the bridge between **image generation** and **video analysis** — regardless of where the images come from.
+
 ---
 
 ## Installation
