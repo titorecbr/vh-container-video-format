@@ -79,6 +79,8 @@ Or give the same prompt to any LLM with access to `vh-video-container` and see w
 
 </details>
 
+> **Download:** [beach_sunset.mp4](docs/beach_sunset.mp4) (4.5 MB) — exported from the 80 MB `.vh` file with `vh export`
+
 ### Night City — 20 seconds, 18 animated people
 
 <p align="center">
@@ -104,7 +106,26 @@ The AI built an urban night scene with 16 buildings (flickering windows, antenna
 
 </details>
 
+> **Download:** [night_city.mp4](docs/night_city.mp4) (981 KB) — exported from the 62 MB `.vh` file with `vh export`
+
 > **Full scripts:** [`examples/generate_beach_sunset.py`](examples/generate_beach_sunset.py) | [`examples/generate_people.py`](examples/generate_people.py)
+
+### Converting VH to MP4
+
+Need a standard MP4 for sharing or playback? A single command converts any `.vh` file:
+
+```bash
+vh export video.vh -o output.mp4
+```
+
+The MP4 is dramatically smaller because H.264 applies inter-frame compression — exactly what VH deliberately avoids for random access. This is the expected tradeoff:
+
+| File | VH Size | MP4 Size | Ratio |
+|------|---------|----------|-------|
+| Beach Sunset (60s, 1440 frames) | 80 MB | 4.5 MB | 18x smaller |
+| Night City (20s, 480 frames) | 62 MB | 981 KB | 63x smaller |
+
+**VH is for working with video** (AI analysis, frame extraction, annotation, random access). **MP4 is for watching video** (streaming, sharing, playback). Use `vh export` when you're done working and need to share the result.
 
 ---
 

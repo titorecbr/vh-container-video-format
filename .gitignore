@@ -10,10 +10,11 @@
 *.mp4
 *.mkv
 
-# Allow doc images
+# Allow doc assets
 !docs/*.jpg
 !docs/*.png
 !docs/*.svg
+!docs/*.mp4
 
 # Python
 __pycache__/
