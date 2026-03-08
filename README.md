@@ -127,6 +127,50 @@ The MP4 is dramatically smaller because H.264 applies inter-frame compression �
 
 **VH is for working with video** (AI analysis, frame extraction, annotation, random access). **MP4 is for watching video** (streaming, sharing, playback). Use `vh export` when you're done working and need to share the result.
 
+### Annotation Sidebar & Document Attachments
+
+The built-in viewer includes a rich annotation sidebar where you can attach structured metadata, documents, and AI-generated labels to any frame — all stored inside the `.vh` file.
+
+<p align="center">
+  <img src="docs/viewer_sidebar_showcase.jpg" alt="VH Viewer — Annotation Sidebar with feature callouts" width="900"/>
+</p>
+
+<p align="center">
+  <img src="docs/viewer_annotations.jpg" alt="VH Viewer showing beach sunset with annotation panel open" width="900"/>
+</p>
+
+**What the sidebar does:**
+
+- **Per-frame annotations** — Add key-value pairs to any frame: scene phases, object detections, LLM descriptions, quality scores. Stored as searchable JSON directly in the `.vh` database.
+- **Document attachments** — Attach PDFs, images, CSVs, or any file to a specific frame. Analysis reports, reference images, raw data — everything travels with the video in a single file.
+- **Edit & delete** — Each annotation has inline edit and delete buttons. Modify values or remove entries without leaving the viewer.
+- **Timeline markers** — Green dots on the timeline show which frames have annotations. Click any card in the sidebar to jump directly to that frame.
+- **CLI search** — Query annotations from the command line without opening the viewer:
+
+```bash
+# Find all annotated phases
+vh search video.vh -k phase
+
+# Find frames labeled as "sunset"
+vh search video.vh -k phase -v sunset
+
+# Add an annotation from CLI
+vh annotate video.vh -f 720 -k scene -v "deep sunset over ocean"
+```
+
+<details>
+<summary><strong>Sidebar close-up</strong></summary>
+
+<p align="center">
+  <img src="docs/viewer_sidebar.jpg" alt="Annotation sidebar close-up showing cards with annotations and attached documents" width="400"/>
+</p>
+
+Each annotation card shows the timestamp, frame number, all key-value pairs with edit/delete controls, and any attached documents with save/delete options. The currently displayed frame's card is highlighted with an accent border.
+
+</details>
+
+For AI pipelines, this means your video, its labels, its analysis results, and its supporting documents are **one portable file** — no folder structures, no sidecar JSONs, no separate databases.
+
 ---
 
 ## Installation
