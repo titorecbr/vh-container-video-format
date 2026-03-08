@@ -21,6 +21,8 @@ Commands:
   vh doc-extract <file.vh> <ID> [-o out]          Extract document
   vh doc-del  <file.vh> <ID>                      Delete document
   vh generate "prompt" -o out.vh [--backend svd]  Generate AI video
+  vh register                                      Register .vh double-click with OS
+  vh unregister                                    Remove .vh file association
 """
 
 import sys
@@ -484,6 +486,300 @@ def cmd_doc_del(args):
     vh.close()
 
 
+def _get_vh_executable():
+    """Find the vh CLI executable path."""
+    import shutil
+    vh_path = shutil.which('vh')
+    if vh_path:
+        return vh_path
+    return None
+
+
+def _register_linux():
+    """Register .vh file association on Linux (freedesktop.org)."""
+    import subprocess
+    import shutil
+
+    home = Path.home()
+    mime_dir = home / '.local' / 'share' / 'mime' / 'packages'
+    apps_dir = home / '.local' / 'share' / 'applications'
+    bin_dir = home / '.local' / 'bin'
+
+    mime_dir.mkdir(parents=True, exist_ok=True)
+    apps_dir.mkdir(parents=True, exist_ok=True)
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    vh_exec = _get_vh_executable()
+    if vh_exec:
+        launcher = vh_exec
+    else:
+        launcher = str(bin_dir / 'vh-viewer')
+        python_exec = sys.executable
+        with open(launcher, 'w') as f:
+            f.write(f'#!/bin/bash\nexec {python_exec} -m vh_video_container.cli viewer "$@"\n')
+        os.chmod(launcher, 0o755)
+
+    mime_xml = mime_dir / 'application-x-vh-video.xml'
+    mime_xml.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">\n'
+        '  <mime-type type="application/x-vh-video">\n'
+        '    <comment>VH Video Container</comment>\n'
+        '    <glob pattern="*.vh"/>\n'
+        '  </mime-type>\n'
+        '</mime-info>\n'
+    )
+
+    desktop_file = apps_dir / 'vh-viewer.desktop'
+    desktop_file.write_text(
+        '[Desktop Entry]\n'
+        'Type=Application\n'
+        'Name=VH Video Viewer\n'
+        'Comment=Open VH video container files\n'
+        f'Exec={launcher} viewer %f\n'
+        'Icon=video-x-generic\n'
+        'Terminal=false\n'
+        'Categories=AudioVideo;Video;Player;\n'
+        'MimeType=application/x-vh-video;\n'
+    )
+
+    mime_base = home / '.local' / 'share' / 'mime'
+    subprocess.run(['update-mime-database', str(mime_base)],
+                   capture_output=True)
+    subprocess.run(['xdg-mime', 'default', 'vh-viewer.desktop',
+                    'application/x-vh-video'], capture_output=True)
+
+    print("Registered .vh file association (Linux/freedesktop.org)")
+    print(f"  MIME type: {mime_xml}")
+    print(f"  Desktop:   {desktop_file}")
+    print(f"  Launcher:  {launcher}")
+
+
+def _register_macos():
+    """Register .vh file association on macOS."""
+    import subprocess
+
+    home = Path.home()
+    app_dir = home / 'Applications' / 'VH Viewer.app' / 'Contents'
+    macos_dir = app_dir / 'MacOS'
+
+    app_dir.mkdir(parents=True, exist_ok=True)
+    macos_dir.mkdir(parents=True, exist_ok=True)
+
+    vh_exec = _get_vh_executable()
+    python_exec = sys.executable
+
+    launcher = macos_dir / 'vh-viewer'
+    if vh_exec:
+        launcher.write_text(
+            '#!/bin/bash\n'
+            f'exec "{vh_exec}" viewer "$@"\n'
+        )
+    else:
+        launcher.write_text(
+            '#!/bin/bash\n'
+            f'exec "{python_exec}" -m vh_video_container.cli viewer "$@"\n'
+        )
+    os.chmod(str(launcher), 0o755)
+
+    plist = app_dir / 'Info.plist'
+    plist.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        '<plist version="1.0">\n'
+        '<dict>\n'
+        '  <key>CFBundleName</key>\n'
+        '  <string>VH Viewer</string>\n'
+        '  <key>CFBundleIdentifier</key>\n'
+        '  <string>com.vh-video.viewer</string>\n'
+        '  <key>CFBundleVersion</key>\n'
+        '  <string>1.0</string>\n'
+        '  <key>CFBundleExecutable</key>\n'
+        '  <string>vh-viewer</string>\n'
+        '  <key>CFBundleDocumentTypes</key>\n'
+        '  <array>\n'
+        '    <dict>\n'
+        '      <key>CFBundleTypeExtensions</key>\n'
+        '      <array>\n'
+        '        <string>vh</string>\n'
+        '      </array>\n'
+        '      <key>CFBundleTypeName</key>\n'
+        '      <string>VH Video Container</string>\n'
+        '      <key>CFBundleTypeRole</key>\n'
+        '      <string>Viewer</string>\n'
+        '      <key>LSHandlerRank</key>\n'
+        '      <string>Owner</string>\n'
+        '    </dict>\n'
+        '  </array>\n'
+        '</dict>\n'
+        '</plist>\n'
+    )
+
+    subprocess.run([
+        '/System/Library/Frameworks/CoreServices.framework/Frameworks/'
+        'LaunchServices.framework/Support/lsregister',
+        '-f', str(app_dir.parent)
+    ], capture_output=True)
+
+    print("Registered .vh file association (macOS)")
+    print(f"  App bundle: {app_dir.parent}")
+    print("  Double-click any .vh file to open in VH Viewer.")
+
+
+def _register_windows():
+    """Register .vh file association on Windows."""
+    import winreg
+
+    vh_exec = _get_vh_executable()
+    python_exec = sys.executable
+
+    if vh_exec:
+        command = f'"{vh_exec}" viewer "%1"'
+    else:
+        command = f'"{python_exec}" -m vh_video_container.cli viewer "%1"'
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                          r'Software\Classes\.vh') as key:
+        winreg.SetValue(key, '', winreg.REG_SZ, 'VHVideoFile')
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                          r'Software\Classes\VHVideoFile') as key:
+        winreg.SetValue(key, '', winreg.REG_SZ, 'VH Video Container')
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                          r'Software\Classes\VHVideoFile\shell\open\command') as key:
+        winreg.SetValue(key, '', winreg.REG_SZ, command)
+
+    import ctypes
+    SHCNE_ASSOCCHANGED = 0x08000000
+    SHCNF_IDLIST = 0x0000
+    ctypes.windll.shell32.SHChangeNotify(
+        SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None)
+
+    print("Registered .vh file association (Windows)")
+    print(f"  Command: {command}")
+    print("  Double-click any .vh file to open in VH Viewer.")
+
+
+def _unregister_linux():
+    """Remove .vh file association on Linux."""
+    import subprocess
+
+    home = Path.home()
+    mime_xml = home / '.local' / 'share' / 'mime' / 'packages' / 'application-x-vh-video.xml'
+    desktop_file = home / '.local' / 'share' / 'applications' / 'vh-viewer.desktop'
+    launcher = home / '.local' / 'bin' / 'vh-viewer'
+
+    removed = []
+    for f in [mime_xml, desktop_file, launcher]:
+        if f.exists():
+            f.unlink()
+            removed.append(str(f))
+
+    mime_base = home / '.local' / 'share' / 'mime'
+    subprocess.run(['update-mime-database', str(mime_base)],
+                   capture_output=True)
+
+    if removed:
+        print("Unregistered .vh file association (Linux)")
+        for r in removed:
+            print(f"  Removed: {r}")
+    else:
+        print("No .vh file association found to remove.")
+
+
+def _unregister_macos():
+    """Remove .vh file association on macOS."""
+    import shutil
+    import subprocess
+
+    app_path = Path.home() / 'Applications' / 'VH Viewer.app'
+    if app_path.exists():
+        shutil.rmtree(app_path)
+        subprocess.run([
+            '/System/Library/Frameworks/CoreServices.framework/Frameworks/'
+            'LaunchServices.framework/Support/lsregister',
+            '-kill', '-r', '-domain', 'local', '-domain', 'system',
+            '-domain', 'user'
+        ], capture_output=True)
+        print("Unregistered .vh file association (macOS)")
+        print(f"  Removed: {app_path}")
+    else:
+        print("No .vh file association found to remove.")
+
+
+def _unregister_windows():
+    """Remove .vh file association on Windows."""
+    import winreg
+
+    removed = False
+    for subkey in [r'Software\Classes\.vh',
+                   r'Software\Classes\VHVideoFile']:
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
+                             subkey + r'\shell\open\command')
+        except OSError:
+            pass
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
+                             subkey + r'\shell\open')
+        except OSError:
+            pass
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
+                             subkey + r'\shell')
+        except OSError:
+            pass
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, subkey)
+            removed = True
+        except OSError:
+            pass
+
+    if removed:
+        import ctypes
+        SHCNE_ASSOCCHANGED = 0x08000000
+        SHCNF_IDLIST = 0x0000
+        ctypes.windll.shell32.SHChangeNotify(
+            SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None)
+        print("Unregistered .vh file association (Windows)")
+    else:
+        print("No .vh file association found to remove.")
+
+
+def cmd_register(args):
+    """Register .vh file association with the OS."""
+    import platform
+    system = platform.system()
+
+    if system == 'Linux':
+        _register_linux()
+    elif system == 'Darwin':
+        _register_macos()
+    elif system == 'Windows':
+        _register_windows()
+    else:
+        print(f"Unsupported platform: {system}")
+        sys.exit(1)
+
+
+def cmd_unregister(args):
+    """Remove .vh file association from the OS."""
+    import platform
+    system = platform.system()
+
+    if system == 'Linux':
+        _unregister_linux()
+    elif system == 'Darwin':
+        _unregister_macos()
+    elif system == 'Windows':
+        _unregister_windows()
+    else:
+        print(f"Unsupported platform: {system}")
+        sys.exit(1)
+
+
 def cmd_generate(args):
     """Generate video from AI model and save as VH."""
     from PIL import Image
@@ -730,6 +1026,14 @@ def main():
     p.add_argument('--aspect-ratio', default=None,
                    help='Aspect ratio (16:9, 9:16, 1:1, 4:3, etc.)')
 
+    # register
+    p = subparsers.add_parser('register',
+                              help='Register .vh file association with the OS')
+
+    # unregister
+    p = subparsers.add_parser('unregister',
+                              help='Remove .vh file association from the OS')
+
     # doc-add
     p = subparsers.add_parser('doc-add', help='Attach a document to a frame')
     p.add_argument('file', help='Input .vh file')
@@ -776,6 +1080,8 @@ def main():
         'analyze': cmd_analyze,
         'import-images': cmd_import_images,
         'generate': cmd_generate,
+        'register': cmd_register,
+        'unregister': cmd_unregister,
         'doc-add': cmd_doc_add,
         'doc-list': cmd_doc_list,
         'doc-extract': cmd_doc_extract,

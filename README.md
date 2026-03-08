@@ -322,6 +322,17 @@ vh play video.vh
 vh generate "A sunset over the ocean" -o sunset.vh --backend kling
 ```
 
+### Double-Click to Open `.vh` Files
+
+Register `.vh` files with your OS so double-clicking opens the VH Viewer automatically:
+
+```bash
+vh register      # register .vh file association
+vh unregister    # remove the association
+```
+
+Works on **Linux** (GNOME, KDE, Deepin, XFCE — via freedesktop.org), **macOS** (Finder — via app bundle + Launch Services), and **Windows** (Explorer — via user registry). No admin/root privileges required.
+
 And the Python library can be imported directly:
 
 ```python
@@ -598,6 +609,8 @@ vh generate "prompt" -o out.vh                  Generate AI video from text/imag
               --duration 5|10                    Seconds per generation (Kling)
               --negative-prompt TEXT             What to avoid in generation
               --aspect-ratio RATIO              Aspect ratio (16:9, 9:16, 1:1, etc.)
+vh register                                    Register .vh double-click with OS
+vh unregister                                  Remove .vh file association
 vh doc-add  <file.vh> <doc> [-f N] [-d DESC]  Attach document to a frame
 vh doc-list <file.vh> [-f N]                  List attached documents
 vh doc-extract <file.vh> <ID> [-o out]        Extract document from VH file
