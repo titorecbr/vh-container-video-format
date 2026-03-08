@@ -495,6 +495,269 @@ def themed_askyesno(parent, title, message):
     return dlg.result
 
 
+def themed_filedialog(parent, title="Select File", mode="open", initialdir=None,
+                      initialfile="", filetypes=None):
+    """Themed file browser dialog matching the player UI.
+
+    mode='open' for selecting a file, mode='save' for saving.
+    Returns filepath string or None if cancelled.
+    """
+    import os
+
+    dlg = _ThemedDialog(parent, title, width=600)
+    dlg.result = None
+
+    if initialdir is None:
+        initialdir = os.path.expanduser("~")
+    current_dir = [os.path.abspath(initialdir)]
+
+    # ── Path bar ──
+    path_frame = tk.Frame(dlg.body, bg=C['surface'])
+    path_frame.pack(fill=tk.X, pady=(0, 8))
+
+    path_var = tk.StringVar(value=current_dir[0])
+    path_entry = tk.Entry(path_frame, textvariable=path_var,
+                          bg=C['surface_3'], fg=C['text_bright'],
+                          insertbackground=C['accent'], font=FONT_MONO_SM,
+                          relief=tk.FLAT, highlightthickness=1,
+                          highlightbackground=C['border'],
+                          highlightcolor=C['accent'])
+    path_entry.pack(fill=tk.X, ipady=5)
+
+    # ── File list area ──
+    list_outer = tk.Frame(dlg.body, bg=C['border'], highlightthickness=0)
+    list_outer.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
+
+    list_inner = tk.Frame(list_outer, bg=C['surface_2'])
+    list_inner.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+
+    scrollbar = tk.Scrollbar(list_inner, orient=tk.VERTICAL,
+                             bg=C['surface_3'], troughcolor=C['surface_2'],
+                             activebackground=C['accent_soft'],
+                             highlightthickness=0, bd=0, width=10,
+                             relief=tk.FLAT)
+    canvas = tk.Canvas(list_inner, bg=C['surface_2'], highlightthickness=0,
+                       height=300, yscrollcommand=scrollbar.set)
+    scrollbar.config(command=canvas.yview)
+
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    scroll_inner = tk.Frame(canvas, bg=C['surface_2'])
+    canvas_win = canvas.create_window((0, 0), window=scroll_inner, anchor='nw')
+
+    def _on_canvas_cfg(e):
+        canvas.itemconfig(canvas_win, width=e.width)
+    canvas.bind('<Configure>', _on_canvas_cfg)
+
+    def _on_mousewheel(e):
+        canvas.yview_scroll(-1 if e.delta > 0 or e.num == 4 else 1, "units")
+
+    def _bind_scroll(widget):
+        """Bind mousewheel to a widget and all its children recursively."""
+        widget.bind('<Button-4>', _on_mousewheel)
+        widget.bind('<Button-5>', _on_mousewheel)
+        widget.bind('<MouseWheel>', _on_mousewheel)
+
+    _bind_scroll(canvas)
+    _bind_scroll(scroll_inner)
+
+    scroll_inner.bind('<Configure>',
+                      lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+    selected_file = [None]
+    file_rows = []
+
+    def _populate(dirpath):
+        """Fill the file list with entries from dirpath."""
+        for w in scroll_inner.winfo_children():
+            w.destroy()
+        file_rows.clear()
+        selected_file[0] = None
+        if mode == 'save':
+            _update_filename_entry()
+
+        try:
+            entries = sorted(os.listdir(dirpath),
+                             key=lambda x: (not os.path.isdir(os.path.join(dirpath, x)),
+                                            x.lower()))
+        except PermissionError:
+            entries = []
+
+        # Parent directory entry
+        parent = os.path.dirname(dirpath)
+        if parent != dirpath:
+            _make_row("..", is_dir=True, fullpath=parent, is_parent=True)
+
+        for name in entries:
+            if name.startswith('.'):
+                continue
+            full = os.path.join(dirpath, name)
+            is_dir = os.path.isdir(full)
+            if not is_dir and filetypes and mode == 'open':
+                # Filter by extension
+                ext = os.path.splitext(name)[1].lower()
+                all_exts = set()
+                for _, pattern in (filetypes or []):
+                    for p in pattern.split():
+                        if p == '*.*':
+                            all_exts = None
+                            break
+                        all_exts.add(p.replace('*', '').lower())
+                    if all_exts is None:
+                        break
+                if all_exts is not None and ext not in all_exts:
+                    continue
+            _make_row(name, is_dir=is_dir, fullpath=full)
+
+        current_dir[0] = dirpath
+        path_var.set(dirpath)
+        canvas.yview_moveto(0)
+
+    def _make_row(name, is_dir=False, fullpath="", is_parent=False):
+        row = tk.Frame(scroll_inner, bg=C['surface_2'], cursor='hand2')
+        row.pack(fill=tk.X, padx=4, pady=1)
+
+        # Icon
+        if is_parent:
+            icon_text = "\u2190"  # left arrow
+            icon_color = C['accent']
+        elif is_dir:
+            icon_text = "\U0001F4C1"  # folder
+            icon_color = C['accent']
+        else:
+            icon_text = "\U0001F4C4"  # document
+            icon_color = C['text_dim']
+
+        icon = tk.Label(row, text=icon_text, fg=icon_color, bg=C['surface_2'],
+                        font=FONT_UI, width=3)
+        icon.pack(side=tk.LEFT, padx=(6, 0))
+
+        label = tk.Label(row, text=name, fg=C['text'] if not is_dir else C['text_bright'],
+                         bg=C['surface_2'], font=FONT_UI if not is_dir else FONT_UI_BOLD,
+                         anchor='w')
+        label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 8))
+
+        if not is_dir:
+            try:
+                size = os.path.getsize(fullpath)
+                if size < 1024:
+                    sz_text = f"{size} B"
+                elif size < 1024 * 1024:
+                    sz_text = f"{size/1024:.1f} KB"
+                else:
+                    sz_text = f"{size/(1024*1024):.1f} MB"
+            except OSError:
+                sz_text = ""
+            sz_label = tk.Label(row, text=sz_text, fg=C['text_dim'],
+                                bg=C['surface_2'], font=FONT_MONO_XS)
+            sz_label.pack(side=tk.RIGHT, padx=(0, 10))
+
+        row_data = {'name': name, 'fullpath': fullpath, 'is_dir': is_dir,
+                    'row': row, 'icon': icon, 'label': label}
+        file_rows.append(row_data)
+
+        def _highlight(bg):
+            row.config(bg=bg)
+            icon.config(bg=bg)
+            label.config(bg=bg)
+            for child in row.winfo_children():
+                child.config(bg=bg)
+
+        def _on_enter(e):
+            if selected_file[0] != fullpath:
+                _highlight(C['surface_3'])
+
+        def _on_leave(e):
+            if selected_file[0] != fullpath:
+                _highlight(C['surface_2'])
+
+        def _on_click(e):
+            if is_dir:
+                _populate(fullpath)
+            else:
+                # Deselect previous
+                for fr in file_rows:
+                    if not fr['is_dir']:
+                        fr['row'].config(bg=C['surface_2'])
+                        fr['icon'].config(bg=C['surface_2'])
+                        fr['label'].config(bg=C['surface_2'])
+                        for ch in fr['row'].winfo_children():
+                            ch.config(bg=C['surface_2'])
+                # Select this
+                _highlight(C['accent_glow'])
+                label.config(fg=C['accent'])
+                selected_file[0] = fullpath
+                if mode == 'save':
+                    _update_filename_entry()
+
+        def _on_dblclick(e):
+            if is_dir:
+                _populate(fullpath)
+            else:
+                selected_file[0] = fullpath
+                _confirm()
+
+        for widget in [row, icon, label] + [c for c in row.winfo_children()]:
+            widget.bind('<Enter>', _on_enter)
+            widget.bind('<Leave>', _on_leave)
+            widget.bind('<Button-1>', _on_click)
+            widget.bind('<Double-Button-1>', _on_dblclick)
+            _bind_scroll(widget)
+
+    # ── Filename entry (for save mode) ──
+    filename_var = tk.StringVar(value=initialfile)
+    filename_frame = None
+
+    def _update_filename_entry():
+        if mode == 'save' and selected_file[0]:
+            filename_var.set(os.path.basename(selected_file[0]))
+
+    if mode == 'save':
+        filename_frame = tk.Frame(dlg.body, bg=C['surface'])
+        filename_frame.pack(fill=tk.X, pady=(0, 4))
+        tk.Label(filename_frame, text="Filename:", fg=C['text_dim'],
+                 bg=C['surface'], font=FONT_UI).pack(side=tk.LEFT, padx=(0, 8))
+        fn_entry = tk.Entry(filename_frame, textvariable=filename_var,
+                            bg=C['surface_3'], fg=C['text_bright'],
+                            insertbackground=C['accent'], font=FONT_MONO_SM,
+                            relief=tk.FLAT, highlightthickness=1,
+                            highlightbackground=C['border'],
+                            highlightcolor=C['accent'])
+        fn_entry.pack(fill=tk.X, expand=True, ipady=5)
+
+    # ── Navigate on path entry ──
+    def _on_path_enter(e):
+        p = path_var.get().strip()
+        if os.path.isdir(p):
+            _populate(p)
+
+    path_entry.bind('<Return>', _on_path_enter)
+
+    # ── Buttons ──
+    def _confirm():
+        if mode == 'open':
+            if selected_file[0] and os.path.isfile(selected_file[0]):
+                dlg.result = selected_file[0]
+                dlg._ok()
+        else:
+            fn = filename_var.get().strip()
+            if fn:
+                dlg.result = os.path.join(current_dir[0], fn)
+                dlg._ok()
+
+    dlg._make_btn(dlg._btn_row, "Cancel", dlg._cancel)
+    btn_text = "Open" if mode == 'open' else "Save"
+    dlg._make_btn(dlg._btn_row, btn_text, _confirm, primary=True)
+
+    # Populate initial directory
+    _populate(current_dir[0])
+
+    dlg.show()
+    dlg.wait_window()
+    return dlg.result
+
+
 # ─────────────────────────────────────────────────────────
 # PIL Rendering Helpers (anti-aliased via 2x supersampling)
 # ─────────────────────────────────────────────────────────
@@ -1704,11 +1967,11 @@ class VHViewer:
     # ── Documents ──
 
     def _attach_document(self):
-        """Attach a document to the current frame via file dialog."""
-        from tkinter import filedialog
-        filepath = filedialog.askopenfilename(
-            parent=self.root,
+        """Attach a document to the current frame via themed file dialog."""
+        filepath = themed_filedialog(
+            self.root,
             title="Attach Document",
+            mode="open",
             filetypes=[
                 ("All files", "*.*"),
                 ("PDF", "*.pdf"),
@@ -1730,13 +1993,13 @@ class VHViewer:
 
     def _export_doc(self, doc_id):
         """Export a document to disk."""
-        from tkinter import filedialog
         doc = self.vh.get_document(doc_id)
         if not doc:
             return
-        filepath = filedialog.asksaveasfilename(
-            parent=self.root,
+        filepath = themed_filedialog(
+            self.root,
             title="Export Document",
+            mode="save",
             initialfile=doc['filename'])
         if not filepath:
             return
@@ -1959,41 +2222,35 @@ class VHViewer:
                 doc_block = tk.Frame(item, bg=CARD_BG)
                 doc_block.pack(fill=tk.X, padx=(14, 8), pady=(3, 3))
 
-                doc_row = tk.Frame(doc_block, bg=CARD_BG)
-                doc_row.pack(fill=tk.X)
+                # Row 1: icon + filename (wraps if long)
+                doc_name_row = tk.Frame(doc_block, bg=CARD_BG)
+                doc_name_row.pack(fill=tk.X)
+
+                tk.Label(doc_name_row, text="\U0001F4CE",
+                         fg=CLR_DOC, bg=CARD_BG,
+                         font=FONT_ACTION).pack(side=tk.LEFT)
+
+                fname = doc['filename']
+                if len(fname) > 30:
+                    fname = fname[:27] + '...'
+                tk.Label(doc_name_row, text=f"  {fname}",
+                         fg=CLR_VAL, bg=CARD_BG,
+                         font=FONT_UI, anchor='w').pack(side=tk.LEFT, fill=tk.X)
+
+                # Row 2: size + action buttons
+                doc_action_row = tk.Frame(doc_block, bg=CARD_BG)
+                doc_action_row.pack(fill=tk.X, pady=(2, 0))
 
                 sz_kb = doc['size_bytes'] / 1024
                 sz_text = f"{sz_kb:.0f} KB" if sz_kb < 1024 else f"{sz_kb/1024:.1f} MB"
 
-                tk.Label(doc_row, text="\U0001F4CE",
-                         fg=CLR_DOC, bg=CARD_BG,
-                         font=FONT_ACTION).pack(side=tk.LEFT)
-
-                tk.Label(doc_row, text=f"  {doc['filename']}",
-                         fg=CLR_VAL, bg=CARD_BG,
-                         font=FONT_UI).pack(side=tk.LEFT)
-
-                tk.Label(doc_row, text=f"  {sz_text}",
+                tk.Label(doc_action_row, text=f"    {sz_text}",
                          fg=CLR_FRAME, bg=CARD_BG,
                          font=FONT_MONO_SM).pack(side=tk.LEFT)
 
-                # Doc buttons
-                doc_btn_bar = tk.Frame(doc_row, bg=CARD_BG)
-                doc_btn_bar.pack(side=tk.RIGHT)
-
-                doc_del = tk.Label(doc_btn_bar, text=" \U0001F5D1 ", fg=CLR_BTN,
-                                   bg=CLR_BTN_BG, font=FONT_ACTION_SM,
-                                   cursor='hand2', padx=5, pady=2)
-                doc_del.pack(side=tk.RIGHT, padx=(4, 0))
-                doc_del.bind('<Button-1>',
-                    lambda e, d=doc: (self._delete_doc(d['id'], d['filename']), 'break')[1])
-                doc_del.bind('<Enter>',
-                    lambda e, w=doc_del: w.config(fg='#ff6666', bg='#3a2a2a'))
-                doc_del.bind('<Leave>',
-                    lambda e, w=doc_del: w.config(fg=CLR_BTN, bg=CLR_BTN_BG))
-
-                doc_exp = tk.Label(doc_btn_bar, text=" \u2B73 ", fg=CLR_BTN,
-                                   bg=CLR_BTN_BG, font=FONT_ACTION_SM,
+                # Buttons on the right of the action row
+                doc_exp = tk.Label(doc_action_row, text=" \u2913 Save ", fg=CLR_BTN,
+                                   bg=CLR_BTN_BG, font=FONT_MONO_XS,
                                    cursor='hand2', padx=5, pady=2)
                 doc_exp.pack(side=tk.RIGHT, padx=(4, 0))
                 doc_exp.bind('<Button-1>',
@@ -2003,11 +2260,23 @@ class VHViewer:
                 doc_exp.bind('<Leave>',
                     lambda e, w=doc_exp: w.config(fg=CLR_BTN, bg=CLR_BTN_BG))
 
+                doc_del = tk.Label(doc_action_row, text=" \U0001F5D1 Del ", fg=CLR_BTN,
+                                   bg=CLR_BTN_BG, font=FONT_MONO_XS,
+                                   cursor='hand2', padx=5, pady=2)
+                doc_del.pack(side=tk.RIGHT, padx=(4, 0))
+                doc_del.bind('<Button-1>',
+                    lambda e, d=doc: (self._delete_doc(d['id'], d['filename']), 'break')[1])
+                doc_del.bind('<Enter>',
+                    lambda e, w=doc_del: w.config(fg='#ff6666', bg='#3a2a2a'))
+                doc_del.bind('<Leave>',
+                    lambda e, w=doc_del: w.config(fg=CLR_BTN, bg=CLR_BTN_BG))
+
                 if doc.get('description'):
                     tk.Label(doc_block, text=doc['description'],
                              fg=CLR_FRAME, bg=CARD_BG,
-                             font=FONT_MONO_SM, anchor='w').pack(
-                                 fill=tk.X, padx=(28, 0))
+                             font=FONT_MONO_SM, anchor='w',
+                             wraplength=220).pack(
+                                 fill=tk.X, padx=(28, 0), pady=(2, 0))
 
         # Bottom padding
         tk.Frame(item, bg=CARD_BG, height=8).pack(fill=tk.X)
@@ -2018,6 +2287,9 @@ class VHViewer:
                 self._seek_to(fid)
 
         def _bind_click_all(widget):
+            # Skip widgets that have their own action (buttons)
+            if str(widget.cget('cursor')) == 'hand2' and widget is not item:
+                return
             widget.bind('<Button-1>', on_click)
             for child in widget.winfo_children():
                 _bind_click_all(child)

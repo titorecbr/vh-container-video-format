@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vh-video-container"
-version = "1.0.0"
+version = "1.0.1"
 description = "SQLite-based video container format optimized for AI workloads"
 readme = "README.md"
 license = "MIT"
