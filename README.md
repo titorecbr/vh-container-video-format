@@ -211,41 +211,71 @@ Generate videos directly from text prompts or images using AI models — no exte
 | **SVD** (Stable Video Diffusion) | Local GPU | Good — abstract/artistic motion | ~2 min/chain | Quick prototypes, artistic videos, offline use |
 | **Kling AI** | Cloud API | Excellent — photorealistic, cinematic | ~30-60s/generation | Realistic scenes, human characters, professional quality |
 
-#### Text-to-Video with SVD (local GPU)
+#### Quick Start: SVD (local GPU)
 
+**Prerequisites:**
+- NVIDIA GPU with **8GB+ VRAM** (tested on RTX 3070)
+- CUDA toolkit and compatible NVIDIA drivers
+- ffmpeg installed (`apt install ffmpeg` or `brew install ffmpeg`)
+
+**Setup:**
 ```bash
-# Generate a 30-second video from a text prompt (15 chains × 14 frames)
-vh generate "A calm ocean with waves gently rolling onto shore" \
-  -o ocean.vh --backend svd --chains 15 --width 512 --height 320 --seed 42
+# 1. Install vh-video-container with SVD dependencies
+#    (automatically installs: torch, diffusers, transformers, accelerate, safetensors, Pillow)
+pip install vh-video-container[generate-svd]
 
-# Image-to-video: animate an existing image
+# 2. Generate a video from a text prompt
+vh generate "A calm ocean with waves gently rolling onto shore" \
+  -o ocean.vh --backend svd --width 512 --height 320 --seed 42
+
+# 3. Generate a longer video with chain generation (15 chains × 14 frames = 30s)
+vh generate "A calm ocean with waves gently rolling onto shore" \
+  -o ocean_30s.vh --backend svd --chains 15 --width 512 --height 320 --seed 42
+
+# 4. Image-to-video: animate an existing image
 vh generate --image photo.jpg -o animated.vh --backend svd --num-frames 25
+
+# 5. Play the result
+vh viewer ocean.vh
 ```
 
-SVD uses SDXL-Turbo to generate a conditioning image from text, then Stable Video Diffusion to animate it. Optimized for 8GB VRAM GPUs (RTX 3070) with sequential CPU offloading and float16 precision.
+SVD uses SDXL-Turbo to generate a conditioning image from text, then Stable Video Diffusion to animate it. Optimized for 8GB VRAM GPUs with sequential CPU offloading and float16 precision. The first run downloads ~10GB of model weights (cached for subsequent runs).
 
-#### Photorealistic Video with Kling AI (cloud API)
+#### Quick Start: Kling AI (cloud API)
 
+**Prerequisites:**
+- Kling AI API account — **[get your keys here](https://klingai.com/global/dev)**
+- ffmpeg installed (`apt install ffmpeg` or `brew install ffmpeg`)
+- No GPU required — video is generated in the cloud
+
+**Setup:**
 ```bash
-# Set API credentials (get keys at https://klingai.com/global/dev)
+# 1. Install vh-video-container with Kling AI dependencies
+#    (automatically installs: PyJWT, requests, Pillow)
+pip install vh-video-container[generate-kling]
+
+# 2. Set your API credentials (from https://klingai.com/global/dev)
 export KLING_ACCESS_KEY=your_access_key
 export KLING_SECRET_KEY=your_secret_key
 
-# Generate cinematic video with realistic humans and environments
+# 3. Generate cinematic video with realistic humans and environments
 vh generate "A woman walking along a tropical beach at sunset, cinematic lighting" \
   -o scene.vh --backend kling --model kling-v2-master --mode pro --duration 10
 
-# Animate a reference image
+# 4. Animate a reference image
 vh generate "Camera slowly zooming in" \
   --image reference.jpg -o animated.vh --backend kling --duration 5
 
-# Chain multiple generations for longer videos
+# 5. Chain multiple generations for longer videos
 vh generate "A bustling city street at night with neon lights" \
   -o city.vh --backend kling --mode pro --duration 10 --chains 3 \
   --aspect-ratio 16:9 --negative-prompt "blurry, low quality"
+
+# 6. Play the result
+vh viewer scene.vh
 ```
 
-Kling AI produces photorealistic video with complex scenes, human characters, and cinematic camera movements. Supports up to 1080p (pro mode), 30fps, and 10-second segments that can be chained for longer videos.
+Kling AI produces photorealistic video with complex scenes, human characters, and cinematic camera movements. Supports up to 1080p (pro mode), 30fps, and 10-second segments that can be chained for longer videos. Kling API usage is billed per generation — check [Kling pricing](https://klingai.com/global/dev) for details.
 
 #### Adding New Backends
 
