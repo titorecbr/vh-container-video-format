@@ -439,6 +439,12 @@ vh analyze  <file.vh> --fn MODULE.func         Run AI function on all frames
               --key KEY                          Annotation key (default: ai_result)
               --batch N                          Batch size (default: 1)
               --frames START-END                 Frame range
+vh import-images <dir|file> -o out.vh          Import images into VH
+              --fps N                            Frames per second (default: 24)
+              --duration N                       Duration per image in seconds
+              --quality N                        JPEG quality 1-100 (default: 90)
+              --resize WxH                       Resize to WIDTHxHEIGHT
+              --annotate-source                  Tag each frame with source filename
 ```
 
 ## VH Viewer

@@ -15,6 +15,7 @@ Commands:
   vh embed    <file.vh> -f N --model clip         Generate embedding
   vh viewer   <file.vh>                           Open visual frame browser
   vh analyze  <file.vh> --fn MODULE.func          Run AI function on all frames
+  vh import-images <dir|file> -o out.vh           Import images into VH
   vh doc-add  <file.vh> <doc> [-f N] [-d DESC]   Attach document to frame
   vh doc-list <file.vh> [-f N]                    List attached documents
   vh doc-extract <file.vh> <ID> [-o out]          Extract document
@@ -310,6 +311,110 @@ def cmd_analyze(args):
     vh.close()
 
 
+def cmd_import_images(args):
+    """Import images from a directory into a new VH file."""
+    from PIL import Image
+    import io
+    import hashlib
+
+    src = Path(args.input)
+    if src.is_file():
+        files = [src]
+    elif src.is_dir():
+        exts = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff', '.tif', '.gif'}
+        files = sorted(f for f in src.iterdir() if f.suffix.lower() in exts)
+    else:
+        print(f"Error: '{args.input}' is not a file or directory.")
+        sys.exit(1)
+
+    if not files:
+        print(f"No images found in '{args.input}'.")
+        sys.exit(1)
+
+    output = args.output or (str(src.with_suffix('.vh')) if src.is_dir() else str(src.with_suffix('.vh')))
+    fps = args.fps
+    duration_per = args.duration
+
+    if duration_per:
+        fps = 1.0 / duration_per
+
+    print(f"Importing {len(files)} image(s) -> {output}")
+    print(f"  FPS: {fps}, Duration per image: {1.0/fps:.2f}s")
+    if args.resize:
+        print(f"  Resize: {args.resize}")
+
+    target_w, target_h = None, None
+    if args.resize:
+        parts = args.resize.lower().split('x')
+        target_w, target_h = int(parts[0]), int(parts[1])
+
+    t0 = time.time()
+    vh = VHFile(output, mode='w')
+
+    first_img = Image.open(files[0])
+    if target_w and target_h:
+        w, h = target_w, target_h
+    else:
+        w, h = first_img.size
+    first_img.close()
+
+    vh.set_meta('width', w)
+    vh.set_meta('height', h)
+    vh.set_meta('fps', fps)
+    vh.set_meta('source', 'import-images')
+    vh.set_meta('source_files', len(files))
+
+    prev_hash = None
+    frames_added = 0
+    refs_added = 0
+
+    for i, filepath in enumerate(files):
+        img = Image.open(filepath).convert('RGB')
+
+        if target_w and target_h:
+            img = img.resize((target_w, target_h), Image.LANCZOS)
+        elif i == 0:
+            w, h = img.size
+
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=args.quality)
+        jpeg_bytes = buf.getvalue()
+        img.close()
+
+        ts_ms = i * (1000.0 / fps)
+
+        frame_hash = hashlib.md5(jpeg_bytes).hexdigest()
+        if frame_hash == prev_hash and i > 0:
+            vh.add_frame_ref(i, ts_ms, ref_frame_id=i - 1)
+            refs_added += 1
+        else:
+            vh.add_frame(i, ts_ms, jpeg_bytes, 'jpeg', w, h)
+            frames_added += 1
+        prev_hash = frame_hash
+
+        if args.annotate_source:
+            vh.annotate(i, 'source_file', filepath.name)
+
+        if (i + 1) % 50 == 0 or i == len(files) - 1:
+            print(f"  [{i+1}/{len(files)}] {filepath.name}")
+
+        if (i + 1) % 200 == 0:
+            vh.commit()
+
+    total_duration = len(files) / fps
+    vh.set_meta('duration_s', total_duration)
+    vh.set_meta('total_frames', len(files))
+    vh.commit()
+    vh.close()
+
+    t1 = time.time()
+    out_size = os.path.getsize(output) / (1024 * 1024)
+    print(f"\nDone in {t1-t0:.1f}s")
+    print(f"  Output:   {output} ({out_size:.1f} MB)")
+    print(f"  Frames:   {frames_added} full + {refs_added} refs = {len(files)} total")
+    print(f"  Duration: {total_duration:.1f}s @ {fps} fps")
+
+
 def cmd_doc_add(args):
     """Attach a document to a frame."""
     vh = VHFile(args.file, mode='a')
@@ -467,6 +572,18 @@ def main():
     p.add_argument('--batch', type=int, default=1, help='Batch size (default: 1)')
     p.add_argument('--frames', help='Frame range: START-END or START,END,... (default: all)')
 
+    # import-images
+    p = subparsers.add_parser('import-images', help='Import images into a VH file')
+    p.add_argument('input', help='Image file or directory of images')
+    p.add_argument('-o', '--output', help='Output .vh file')
+    p.add_argument('--fps', type=float, default=24, help='Frames per second (default: 24)')
+    p.add_argument('--duration', type=float, default=None,
+                   help='Duration per image in seconds (overrides --fps)')
+    p.add_argument('--quality', type=int, default=90, help='JPEG quality 1-100 (default: 90)')
+    p.add_argument('--resize', default=None, help='Resize to WIDTHxHEIGHT (e.g. 1920x1080)')
+    p.add_argument('--annotate-source', action='store_true',
+                   help='Annotate each frame with its source filename')
+
     # doc-add
     p = subparsers.add_parser('doc-add', help='Attach a document to a frame')
     p.add_argument('file', help='Input .vh file')
@@ -511,6 +628,7 @@ def main():
         'embed': cmd_embed,
         'viewer': cmd_viewer,
         'analyze': cmd_analyze,
+        'import-images': cmd_import_images,
         'doc-add': cmd_doc_add,
         'doc-list': cmd_doc_list,
         'doc-extract': cmd_doc_extract,
