@@ -474,14 +474,134 @@ def cmd_doc_del(args):
     vh.close()
 
 
+_VH_ICON_SVG = '''\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C3CE1"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="hole" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B1F7E"/>
+      <stop offset="100%" stop-color="#1E1252"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="shadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1E1252" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <path d="M 80 32 L 352 32 L 432 112 L 432 448 Q 432 480 400 480 L 112 480 Q 80 480 80 448 Z"
+        fill="url(#bg)" filter="url(#shadow)"/>
+  <path d="M 352 32 L 352 80 Q 352 112 384 112 L 432 112 Z"
+        fill="url(#fold)" opacity="0.9"/>
+  <path d="M 80 32 L 352 32 L 432 112 L 432 448 Q 432 480 400 480 L 112 480 Q 80 480 80 448 Z"
+        fill="none" stroke="white" stroke-opacity="0.15" stroke-width="2"/>
+  <rect x="96" y="155" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="185" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="215" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="245" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="275" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="305" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="155" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="185" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="215" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="245" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="275" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="305" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="130" y="150" width="252" height="180" rx="12" fill="#1E1252" opacity="0.5"/>
+  <rect x="130" y="150" width="252" height="180" rx="12" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1.5"/>
+  <circle cx="256" cy="240" r="48" fill="white" opacity="0.15"/>
+  <circle cx="256" cy="240" r="36" fill="white" opacity="0.2"/>
+  <polygon points="244,218 244,262 278,240" fill="white" opacity="0.95" filter="url(#glow)"/>
+  <text x="256" y="420" text-anchor="middle"
+        font-family="'Segoe UI','SF Pro Display','Helvetica Neue',Arial,sans-serif"
+        font-size="88" font-weight="800" fill="white" letter-spacing="8" opacity="0.95">VH</text>
+  <rect x="176" y="432" width="160" height="28" rx="14" fill="white" opacity="0.12"/>
+  <text x="256" y="453" text-anchor="middle"
+        font-family="'SF Mono','Consolas','Courier New',monospace"
+        font-size="16" font-weight="600" fill="white" letter-spacing="2" opacity="0.6">VIDEO FORMAT</text>
+  <circle cx="148" cy="368" r="4" fill="#A78BFA" opacity="0.5"/>
+  <circle cx="168" cy="368" r="4" fill="#A78BFA" opacity="0.4"/>
+  <circle cx="188" cy="368" r="4" fill="#A78BFA" opacity="0.3"/>
+  <circle cx="208" cy="368" r="4" fill="#C084FC" opacity="0.5"/>
+  <circle cx="228" cy="368" r="4" fill="#C084FC" opacity="0.4"/>
+  <circle cx="248" cy="368" r="4" fill="#C084FC" opacity="0.3"/>
+  <circle cx="268" cy="368" r="4" fill="#E9D5FF" opacity="0.5"/>
+  <circle cx="288" cy="368" r="4" fill="#E9D5FF" opacity="0.4"/>
+  <circle cx="308" cy="368" r="4" fill="#E9D5FF" opacity="0.3"/>
+  <circle cx="328" cy="368" r="4" fill="#F0ABFC" opacity="0.5"/>
+  <circle cx="348" cy="368" r="4" fill="#F0ABFC" opacity="0.4"/>
+  <circle cx="368" cy="368" r="4" fill="#F0ABFC" opacity="0.3"/>
+</svg>'''
+
+_ICON_NAME = 'application-x-vh-video'
+
+
 def _get_vh_executable():
     """Find the vh CLI executable path."""
     import shutil
     vh_path = shutil.which('vh')
     if vh_path:
         return vh_path
-    # Fallback: use python -m vh_video_container.cli
     return None
+
+
+def _install_icon_linux(home):
+    """Install VH icon into hicolor theme for Linux."""
+    import subprocess
+    import shutil
+
+    icons_base = home / '.local' / 'share' / 'icons' / 'hicolor'
+
+    # Install SVG (scalable)
+    svg_dir = icons_base / 'scalable' / 'mimetypes'
+    svg_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = svg_dir / f'{_ICON_NAME}.svg'
+    svg_path.write_text(_VH_ICON_SVG)
+
+    # Generate PNGs if rsvg-convert is available
+    rsvg = shutil.which('rsvg-convert')
+    if rsvg:
+        for size in [48, 128, 256, 512]:
+            png_dir = icons_base / f'{size}x{size}' / 'mimetypes'
+            png_dir.mkdir(parents=True, exist_ok=True)
+            png_path = png_dir / f'{_ICON_NAME}.png'
+            subprocess.run([rsvg, '-w', str(size), '-h', str(size),
+                            str(svg_path), '-o', str(png_path)],
+                           capture_output=True)
+
+    # Update icon cache
+    subprocess.run(['gtk-update-icon-cache', '-f', '-t', str(icons_base)],
+                   capture_output=True)
+
+    return str(svg_path)
+
+
+def _remove_icon_linux(home):
+    """Remove VH icon from hicolor theme."""
+    icons_base = home / '.local' / 'share' / 'icons' / 'hicolor'
+    removed = []
+
+    svg_path = icons_base / 'scalable' / 'mimetypes' / f'{_ICON_NAME}.svg'
+    if svg_path.exists():
+        svg_path.unlink()
+        removed.append(str(svg_path))
+
+    for size in [48, 128, 256, 512]:
+        png_path = icons_base / f'{size}x{size}' / 'mimetypes' / f'{_ICON_NAME}.png'
+        if png_path.exists():
+            png_path.unlink()
+            removed.append(str(png_path))
+
+    return removed
 
 
 def _register_linux():
@@ -503,26 +623,26 @@ def _register_linux():
     if vh_exec:
         launcher = vh_exec
     else:
-        # Create a wrapper script
         launcher = str(bin_dir / 'vh-viewer')
         python_exec = sys.executable
         with open(launcher, 'w') as f:
             f.write(f'#!/bin/bash\nexec {python_exec} -m vh_video_container.cli viewer "$@"\n')
         os.chmod(launcher, 0o755)
 
-    # MIME type definition
+    # MIME type with icon
     mime_xml = mime_dir / 'application-x-vh-video.xml'
     mime_xml.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">\n'
         '  <mime-type type="application/x-vh-video">\n'
         '    <comment>VH Video Container</comment>\n'
+        '    <icon name="application-x-vh-video"/>\n'
         '    <glob pattern="*.vh"/>\n'
         '  </mime-type>\n'
         '</mime-info>\n'
     )
 
-    # Desktop entry
+    # Desktop entry with custom icon
     desktop_file = apps_dir / 'vh-viewer.desktop'
     desktop_file.write_text(
         '[Desktop Entry]\n'
@@ -530,11 +650,14 @@ def _register_linux():
         'Name=VH Video Viewer\n'
         'Comment=Open VH video container files\n'
         f'Exec={launcher} viewer %f\n'
-        'Icon=video-x-generic\n'
+        f'Icon={_ICON_NAME}\n'
         'Terminal=false\n'
         'Categories=AudioVideo;Video;Player;\n'
         'MimeType=application/x-vh-video;\n'
     )
+
+    # Install icon (before prints)
+    icon_path = _install_icon_linux(home)
 
     # Update MIME database
     mime_base = home / '.local' / 'share' / 'mime'
@@ -548,19 +671,23 @@ def _register_linux():
     print("Registered .vh file association (Linux/freedesktop.org)")
     print(f"  MIME type: {mime_xml}")
     print(f"  Desktop:   {desktop_file}")
+    print(f"  Icon:      {icon_path}")
     print(f"  Launcher:  {launcher}")
 
 
 def _register_macos():
     """Register .vh file association on macOS."""
     import subprocess
+    import shutil
 
     home = Path.home()
     app_dir = home / 'Applications' / 'VH Viewer.app' / 'Contents'
     macos_dir = app_dir / 'MacOS'
+    res_dir = app_dir / 'Resources'
 
     app_dir.mkdir(parents=True, exist_ok=True)
     macos_dir.mkdir(parents=True, exist_ok=True)
+    res_dir.mkdir(parents=True, exist_ok=True)
 
     vh_exec = _get_vh_executable()
     python_exec = sys.executable
@@ -579,7 +706,20 @@ def _register_macos():
         )
     os.chmod(str(launcher), 0o755)
 
-    # Info.plist
+    # Write SVG icon, generate PNG for macOS
+    svg_path = res_dir / 'vh-icon.svg'
+    svg_path.write_text(_VH_ICON_SVG)
+    icon_file = 'vh-icon.svg'
+
+    rsvg = shutil.which('rsvg-convert')
+    if rsvg:
+        png_path = res_dir / 'vh-icon.png'
+        subprocess.run([rsvg, '-w', '512', '-h', '512',
+                        str(svg_path), '-o', str(png_path)],
+                       capture_output=True)
+        icon_file = 'vh-icon.png'
+
+    # Info.plist with icon
     plist = app_dir / 'Info.plist'
     plist.write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -595,6 +735,8 @@ def _register_macos():
         '  <string>1.0</string>\n'
         '  <key>CFBundleExecutable</key>\n'
         '  <string>vh-viewer</string>\n'
+        f'  <key>CFBundleIconFile</key>\n'
+        f'  <string>{icon_file}</string>\n'
         '  <key>CFBundleDocumentTypes</key>\n'
         '  <array>\n'
         '    <dict>\n'
@@ -608,6 +750,8 @@ def _register_macos():
         '      <string>Viewer</string>\n'
         '      <key>LSHandlerRank</key>\n'
         '      <string>Owner</string>\n'
+        f'      <key>CFBundleTypeIconFile</key>\n'
+        f'      <string>{icon_file}</string>\n'
         '    </dict>\n'
         '  </array>\n'
         '</dict>\n'
@@ -629,6 +773,8 @@ def _register_macos():
 def _register_windows():
     """Register .vh file association on Windows."""
     import winreg
+    import shutil
+    import subprocess
 
     vh_exec = _get_vh_executable()
     python_exec = sys.executable
@@ -637,6 +783,40 @@ def _register_windows():
         command = f'"{vh_exec}" viewer "%1"'
     else:
         command = f'"{python_exec}" -m vh_video_container.cli viewer "%1"'
+
+    # Write icon to user's local app data
+    icon_dir = Path(os.environ.get('LOCALAPPDATA',
+                    Path.home() / 'AppData' / 'Local')) / 'VHVideo'
+    icon_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = icon_dir / 'vh-icon.svg'
+    svg_path.write_text(_VH_ICON_SVG)
+    ico_path = icon_dir / 'vh-icon.ico'
+
+    # Try to generate .ico from SVG via rsvg-convert + Pillow
+    icon_set = False
+    rsvg = shutil.which('rsvg-convert')
+    try:
+        from PIL import Image as PILImage
+        import io
+        if rsvg:
+            png_path = icon_dir / 'vh-icon.png'
+            subprocess.run([rsvg, '-w', '256', '-h', '256',
+                            str(svg_path), '-o', str(png_path)],
+                           capture_output=True)
+            img = PILImage.open(str(png_path))
+        else:
+            # Try cairosvg if available
+            import cairosvg
+            png_data = cairosvg.svg2png(bytestring=_VH_ICON_SVG.encode(),
+                                        output_width=256, output_height=256)
+            img = PILImage.open(io.BytesIO(png_data))
+
+        # Save as ICO with multiple sizes
+        img.save(str(ico_path), format='ICO',
+                 sizes=[(256, 256), (128, 128), (48, 48), (32, 32), (16, 16)])
+        icon_set = True
+    except Exception:
+        pass
 
     # Register .vh extension
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
@@ -647,6 +827,12 @@ def _register_windows():
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
                           r'Software\Classes\VHVideoFile') as key:
         winreg.SetValue(key, '', winreg.REG_SZ, 'VH Video Container')
+
+    # Register icon
+    if icon_set and ico_path.exists():
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                              r'Software\Classes\VHVideoFile\DefaultIcon') as key:
+            winreg.SetValue(key, '', winreg.REG_SZ, str(ico_path))
 
     # Register open command
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
@@ -662,6 +848,8 @@ def _register_windows():
 
     print("Registered .vh file association (Windows)")
     print(f"  Command: {command}")
+    if icon_set:
+        print(f"  Icon:    {ico_path}")
     print("  Double-click any .vh file to open in VH Viewer.")
 
 
@@ -680,9 +868,17 @@ def _unregister_linux():
             f.unlink()
             removed.append(str(f))
 
+    # Remove icons
+    removed.extend(_remove_icon_linux(home))
+
     # Update MIME database
     mime_base = home / '.local' / 'share' / 'mime'
     subprocess.run(['update-mime-database', str(mime_base)],
+                   capture_output=True)
+
+    # Update icon cache
+    icons_base = home / '.local' / 'share' / 'icons' / 'hicolor'
+    subprocess.run(['gtk-update-icon-cache', '-f', '-t', str(icons_base)],
                    capture_output=True)
 
     if removed:
@@ -717,30 +913,26 @@ def _unregister_macos():
 def _unregister_windows():
     """Remove .vh file association on Windows."""
     import winreg
+    import shutil
 
     removed = False
-    for subkey in [r'Software\Classes\.vh',
-                   r'Software\Classes\VHVideoFile']:
-        try:
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
-                             subkey + r'\shell\open\command')
-        except OSError:
-            pass
-        try:
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
-                             subkey + r'\shell\open')
-        except OSError:
-            pass
-        try:
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
-                             subkey + r'\shell')
-        except OSError:
-            pass
+    for subkey in [r'Software\Classes\VHVideoFile\DefaultIcon',
+                   r'Software\Classes\VHVideoFile\shell\open\command',
+                   r'Software\Classes\VHVideoFile\shell\open',
+                   r'Software\Classes\VHVideoFile\shell',
+                   r'Software\Classes\VHVideoFile',
+                   r'Software\Classes\.vh']:
         try:
             winreg.DeleteKey(winreg.HKEY_CURRENT_USER, subkey)
             removed = True
         except OSError:
             pass
+
+    # Remove icon files
+    icon_dir = Path(os.environ.get('LOCALAPPDATA',
+                    Path.home() / 'AppData' / 'Local')) / 'VHVideo'
+    if icon_dir.exists():
+        shutil.rmtree(icon_dir)
 
     if removed:
         import ctypes

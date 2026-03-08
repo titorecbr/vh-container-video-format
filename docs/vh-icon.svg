@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Main gradient: deep purple to electric blue -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C3CE1"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <!-- Folded corner gradient -->
+    <linearGradient id="fold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <!-- Play button gradient -->
+    <linearGradient id="play" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F0ABFC"/>
+      <stop offset="100%" stop-color="#C084FC"/>
+    </linearGradient>
+    <!-- Film strip hole gradient -->
+    <linearGradient id="hole" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B1F7E"/>
+      <stop offset="100%" stop-color="#1E1252"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <!-- Shadow -->
+    <filter id="shadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1E1252" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- File shape with folded corner -->
+  <path d="M 80 32 L 352 32 L 432 112 L 432 448 Q 432 480 400 480 L 112 480 Q 80 480 80 448 Z"
+        fill="url(#bg)" filter="url(#shadow)"/>
+
+  <!-- Folded corner -->
+  <path d="M 352 32 L 352 80 Q 352 112 384 112 L 432 112 Z"
+        fill="url(#fold)" opacity="0.9"/>
+
+  <!-- Subtle inner border -->
+  <path d="M 80 32 L 352 32 L 432 112 L 432 448 Q 432 480 400 480 L 112 480 Q 80 480 80 448 Z"
+        fill="none" stroke="white" stroke-opacity="0.15" stroke-width="2"/>
+
+  <!-- Film strip - left side -->
+  <rect x="96" y="155" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="185" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="215" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="245" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="275" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="96" y="305" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+
+  <!-- Film strip - right side -->
+  <rect x="392" y="155" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="185" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="215" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="245" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="275" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+  <rect x="392" y="305" width="24" height="16" rx="3" fill="url(#hole)" opacity="0.6"/>
+
+  <!-- Screen/viewport area -->
+  <rect x="130" y="150" width="252" height="180" rx="12" fill="#1E1252" opacity="0.5"/>
+  <rect x="130" y="150" width="252" height="180" rx="12" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1.5"/>
+
+  <!-- Play button circle -->
+  <circle cx="256" cy="240" r="48" fill="white" opacity="0.15"/>
+  <circle cx="256" cy="240" r="36" fill="white" opacity="0.2"/>
+
+  <!-- Play triangle -->
+  <polygon points="244,218 244,262 278,240" fill="white" opacity="0.95" filter="url(#glow)"/>
+
+  <!-- "VH" text -->
+  <text x="256" y="420" text-anchor="middle" font-family="'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-size="88" font-weight="800" fill="white" letter-spacing="8" opacity="0.95">VH</text>
+
+  <!-- Subtle ".vh" extension label -->
+  <rect x="176" y="432" width="160" height="28" rx="14" fill="white" opacity="0.12"/>
+  <text x="256" y="453" text-anchor="middle" font-family="'SF Mono', 'Consolas', 'Courier New', monospace"
+        font-size="16" font-weight="600" fill="white" letter-spacing="2" opacity="0.6">VIDEO FORMAT</text>
+
+  <!-- Decorative dots - database/frames motif -->
+  <circle cx="148" cy="368" r="4" fill="#A78BFA" opacity="0.5"/>
+  <circle cx="168" cy="368" r="4" fill="#A78BFA" opacity="0.4"/>
+  <circle cx="188" cy="368" r="4" fill="#A78BFA" opacity="0.3"/>
+  <circle cx="208" cy="368" r="4" fill="#C084FC" opacity="0.5"/>
+  <circle cx="228" cy="368" r="4" fill="#C084FC" opacity="0.4"/>
+  <circle cx="248" cy="368" r="4" fill="#C084FC" opacity="0.3"/>
+  <circle cx="268" cy="368" r="4" fill="#E9D5FF" opacity="0.5"/>
+  <circle cx="288" cy="368" r="4" fill="#E9D5FF" opacity="0.4"/>
+  <circle cx="308" cy="368" r="4" fill="#E9D5FF" opacity="0.3"/>
+  <circle cx="328" cy="368" r="4" fill="#F0ABFC" opacity="0.5"/>
+  <circle cx="348" cy="368" r="4" fill="#F0ABFC" opacity="0.4"/>
+  <circle cx="368" cy="368" r="4" fill="#F0ABFC" opacity="0.3"/>
+</svg>
