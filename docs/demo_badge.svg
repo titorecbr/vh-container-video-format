@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2ed573"/>
+      <stop offset="100%" stop-color="#1abc9c"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="260" rx="16" fill="url(#bgGrad)"/>
+  <rect x="1" y="1" width="898" height="258" rx="15" fill="none" stroke="#2ed57322" stroke-width="1"/>
+
+  <!-- Left: Icon + Title -->
+  <g transform="translate(40, 30)">
+    <!-- VH icon -->
+    <rect x="0" y="0" width="56" height="56" rx="12" fill="#2ed57318" stroke="#2ed57344" stroke-width="1"/>
+    <text x="28" y="38" text-anchor="middle" fill="#2ed573" font-size="22" font-weight="800" filter="url(#glow)">.vh</text>
+
+    <!-- Title -->
+    <text x="72" y="22" fill="#f0f6fc" font-size="20" font-weight="700">AI-Generated Video Demo</text>
+    <text x="72" y="44" fill="#8b949e" font-size="13">480 frames generated with pure Python &amp; written directly to VH format</text>
+  </g>
+
+  <!-- Stat cards -->
+  <g transform="translate(40, 105)">
+    <!-- Card 1: Frames -->
+    <rect x="0" y="0" width="155" height="70" rx="10" fill="#1c1f26" stroke="#30363d" stroke-width="1" filter="url(#shadow)"/>
+    <text x="20" y="28" fill="#2ed573" font-size="24" font-weight="700" filter="url(#glow)">480</text>
+    <text x="20" y="50" fill="#8b949e" font-size="12">frames @ 24fps</text>
+
+    <!-- Card 2: People -->
+    <rect x="175" y="0" width="155" height="70" rx="10" fill="#1c1f26" stroke="#30363d" stroke-width="1" filter="url(#shadow)"/>
+    <text x="195" y="28" fill="#2ed573" font-size="24" font-weight="700" filter="url(#glow)">18</text>
+    <text x="195" y="50" fill="#8b949e" font-size="12">animated people</text>
+
+    <!-- Card 3: Buildings -->
+    <rect x="350" y="0" width="155" height="70" rx="10" fill="#1c1f26" stroke="#30363d" stroke-width="1" filter="url(#shadow)"/>
+    <text x="370" y="28" fill="#2ed573" font-size="24" font-weight="700" filter="url(#glow)">16</text>
+    <text x="370" y="50" fill="#8b949e" font-size="12">buildings + lights</text>
+
+    <!-- Card 4: Annotations -->
+    <rect x="525" y="0" width="155" height="70" rx="10" fill="#1c1f26" stroke="#30363d" stroke-width="1" filter="url(#shadow)"/>
+    <text x="545" y="28" fill="#2ed573" font-size="24" font-weight="700" filter="url(#glow)">4</text>
+    <text x="545" y="50" fill="#8b949e" font-size="12">scene annotations</text>
+
+    <!-- Card 5: Size -->
+    <rect x="700" y="0" width="155" height="70" rx="10" fill="#1c1f26" stroke="#30363d" stroke-width="1" filter="url(#shadow)"/>
+    <text x="720" y="28" fill="#2ed573" font-size="24" font-weight="700" filter="url(#glow)">62 MB</text>
+    <text x="720" y="50" fill="#8b949e" font-size="12">self-contained .vh</text>
+  </g>
+
+  <!-- Bottom bar -->
+  <g transform="translate(40, 200)">
+    <rect x="0" y="0" width="820" height="36" rx="8" fill="#2ed57310" stroke="#2ed57322" stroke-width="1"/>
+    <text x="16" y="23" fill="#7bed9f" font-size="12" font-weight="600" font-family="'SF Mono', 'Fira Code', monospace">Zero ffmpeg. Zero video codecs. Pure Python + Pillow frames written to SQLite via VHFile API.</text>
+    <text x="790" y="23" text-anchor="end" fill="#2ed573" font-size="12" font-weight="700">20s video</text>
+  </g>
+</svg>

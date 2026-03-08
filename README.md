@@ -8,6 +8,67 @@ VH is a video container format that stores every frame as an individually addres
   <img src="docs/comparison.svg" alt="Traditional Video vs VH Format comparison" width="900"/>
 </p>
 
+---
+
+## See It In Action
+
+This 20-second video was **generated entirely with Python** — no ffmpeg, no video codecs, no external assets. Every frame was rendered with Pillow and written directly into a `.vh` file using the `VHFile` API. The result is a fully playable, annotated, AI-ready video container.
+
+<p align="center">
+  <img src="docs/demo_badge.svg" alt="AI-Generated Video Demo Stats" width="900"/>
+</p>
+
+<p align="center">
+  <img src="docs/demo_showcase.jpg" alt="Night City demo — VH Viewer with code" width="900"/>
+</p>
+
+<p align="center">
+  <img src="docs/demo_filmstrip.jpg" alt="Timeline filmstrip showing frames across the video" width="900"/>
+</p>
+
+<details>
+<summary><strong>How it was made (30 lines)</strong></summary>
+
+```python
+from vh_video_container import VHFile
+from PIL import Image, ImageDraw
+import io
+
+with VHFile("night_city.vh", mode="w") as vh:
+    vh.set_meta("width", 1280)
+    vh.set_meta("height", 720)
+    vh.set_meta("fps", 24)
+
+    for i in range(480):
+        # Render frame: city skyline, street lights, walking people
+        img = Image.new("RGB", (1280, 720), (13, 17, 23))
+        draw = ImageDraw.Draw(img)
+        draw_buildings(draw, i)
+        draw_people(draw, i)
+        draw_lights(draw, img, i)
+
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=90)
+        vh.add_frame(i, (i / 24) * 1000, buf.getvalue(), "jpeg", 1280, 720)
+
+    # Annotate key moments — searchable metadata built into the file
+    vh.annotate(0, "scene", "night_city_intro")
+    vh.annotate(0, "people_count", 18)
+    vh.annotate(240, "scene", "midpoint")
+    vh.commit()
+
+# Result: 62 MB self-contained video with annotations
+# Open it:  vh viewer night_city.vh
+# Query it: vh search night_city.vh -k scene
+```
+
+</details>
+
+> **Try it yourself** — the full generation script is in [`examples/generate_people.py`](examples/generate_people.py).
+> Run it with `python examples/generate_people.py` and open the result with `vh viewer night_city.vh`.
+
+---
+
 ## Installation
 
 ```bash
