@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff4757"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2ed573"/>
+      <stop offset="100%" stop-color="#1abc9c"/>
+    </linearGradient>
+    <linearGradient id="redLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff6b81"/>
+      <stop offset="100%" stop-color="#ff4757"/>
+    </linearGradient>
+    <linearGradient id="greenLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7bed9f"/>
+      <stop offset="100%" stop-color="#2ed573"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="420" rx="16" fill="url(#bgGrad)"/>
+  <rect x="1" y="1" width="898" height="418" rx="15" fill="none" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Title -->
+  <text x="450" y="42" text-anchor="middle" fill="#f0f6fc" font-size="15" font-weight="600" letter-spacing="3">HOW DOES FRAME ACCESS WORK?</text>
+  <line x1="320" y1="52" x2="580" y2="52" stroke="#30363d" stroke-width="1"/>
+
+  <!-- ==================== LEFT: Traditional ==================== -->
+  <!-- Card -->
+  <rect x="30" y="72" width="410" height="320" rx="12" fill="#1c1f26" stroke="#ff475733" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Header -->
+  <rect x="30" y="72" width="410" height="44" rx="12" fill="url(#redGrad)" opacity="0.15"/>
+  <rect x="30" y="104" width="410" height="12" fill="#1c1f26"/>
+  <circle cx="54" cy="94" r="5" fill="#ff4757" opacity="0.9"/>
+  <text x="72" y="99" fill="#ff6b81" font-size="14" font-weight="700" letter-spacing="1">TRADITIONAL VIDEO</text>
+  <text x="390" y="99" text-anchor="end" fill="#ff475788" font-size="11" font-weight="600">SLOW PATH</text>
+
+  <!-- Pipeline steps -->
+  <!-- Step 1: MP4 -->
+  <rect x="56" y="132" width="72" height="34" rx="6" fill="#ff475718" stroke="#ff475744" stroke-width="1"/>
+  <text x="92" y="153" text-anchor="middle" fill="#ff6b81" font-size="11" font-weight="600">MP4</text>
+
+  <!-- Arrow 1 -->
+  <line x1="132" y1="149" x2="152" y2="149" stroke="#ff475766" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+  <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-auto">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff475766"/>
+  </marker>
+
+  <!-- Step 2: Demux -->
+  <rect x="156" y="132" width="72" height="34" rx="6" fill="#ff475718" stroke="#ff475744" stroke-width="1"/>
+  <text x="192" y="153" text-anchor="middle" fill="#ff6b81" font-size="11" font-weight="600">Demux</text>
+
+  <!-- Arrow 2 -->
+  <line x1="232" y1="149" x2="252" y2="149" stroke="#ff475766" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- Step 3: Decode -->
+  <rect x="256" y="132" width="72" height="34" rx="6" fill="#ff475718" stroke="#ff475744" stroke-width="1"/>
+  <text x="292" y="153" text-anchor="middle" fill="#ff6b81" font-size="11" font-weight="600">Decode</text>
+
+  <!-- Arrow 3 -->
+  <line x1="332" y1="149" x2="352" y2="149" stroke="#ff475766" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- Step 4: Seek -->
+  <rect x="356" y="132" width="60" height="34" rx="6" fill="#ff475718" stroke="#ff475744" stroke-width="1"/>
+  <text x="386" y="153" text-anchor="middle" fill="#ff6b81" font-size="11" font-weight="600">Seek</text>
+
+  <!-- Description block -->
+  <text x="56" y="196" fill="#8b949e" font-size="12">
+    <tspan x="56" dy="0" fill="#ff6b81">Frame 5000?</tspan>
+  </text>
+  <text x="56" y="220" fill="#6e7681" font-size="11.5">
+    <tspan x="56" dy="0"><tspan fill="#484f58">1.</tspan> Find nearest keyframe <tspan fill="#484f58">(frame 4992)</tspan></tspan>
+    <tspan x="56" dy="20"><tspan fill="#484f58">2.</tspan> Decode frames 4992 → 4993 → ... → 5000</tspan>
+    <tspan x="56" dy="20"><tspan fill="#484f58">3.</tspan> Discard 7 intermediate frames</tspan>
+    <tspan x="56" dy="20"><tspan fill="#484f58">4.</tspan> Convert colorspace to RGB</tspan>
+    <tspan x="56" dy="20"><tspan fill="#484f58">5.</tspan> Copy to numpy array</tspan>
+  </text>
+
+  <!-- Time badge -->
+  <rect x="56" y="340" width="160" height="32" rx="8" fill="#ff475712" stroke="#ff475733" stroke-width="1"/>
+  <text x="78" y="361" fill="#ff4757" font-size="18" font-weight="700">~120ms</text>
+  <text x="168" y="360" fill="#6e7681" font-size="11">/ frame</text>
+
+  <!-- ==================== RIGHT: VH Format ==================== -->
+  <!-- Card -->
+  <rect x="460" y="72" width="410" height="320" rx="12" fill="#1c1f26" stroke="#2ed57333" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Header -->
+  <rect x="460" y="72" width="410" height="44" rx="12" fill="url(#greenGrad)" opacity="0.15"/>
+  <rect x="460" y="104" width="410" height="12" fill="#1c1f26"/>
+  <circle cx="484" cy="94" r="5" fill="#2ed573" opacity="0.9"/>
+  <text x="502" y="99" fill="#7bed9f" font-size="14" font-weight="700" letter-spacing="1">VH FORMAT</text>
+  <text x="820" y="99" text-anchor="end" fill="#2ed57388" font-size="11" font-weight="600">FAST PATH</text>
+
+  <!-- Pipeline: just 2 steps -->
+  <!-- Step 1: .vh -->
+  <rect x="486" y="132" width="72" height="34" rx="6" fill="#2ed57318" stroke="#2ed57344" stroke-width="1"/>
+  <text x="522" y="153" text-anchor="middle" fill="#7bed9f" font-size="11" font-weight="600">.vh</text>
+
+  <!-- Arrow -->
+  <line x1="562" y1="149" x2="590" y2="149" stroke="#2ed57366" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-auto">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2ed57366"/>
+  </marker>
+
+  <!-- Step 2: Query -->
+  <rect x="594" y="126" width="160" height="46" rx="6" fill="#2ed57318" stroke="#2ed57344" stroke-width="1"/>
+  <text x="674" y="147" text-anchor="middle" fill="#7bed9f" font-size="10" font-weight="600" font-family="'SF Mono', 'Fira Code', monospace">SELECT image_data</text>
+  <text x="674" y="163" text-anchor="middle" fill="#7bed9f" font-size="10" font-family="'SF Mono', 'Fira Code', monospace" opacity="0.7">WHERE frame_id = N</text>
+
+  <!-- Arrow to result -->
+  <line x1="758" y1="149" x2="786" y2="149" stroke="#2ed57366" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+  <!-- Step 3: Done -->
+  <rect x="790" y="132" width="56" height="34" rx="6" fill="#2ed57330" stroke="#2ed57366" stroke-width="1"/>
+  <text x="818" y="152" text-anchor="middle" fill="#2ed573" font-size="14">⚡</text>
+
+  <!-- Description block -->
+  <text x="486" y="196" fill="#7bed9f" font-size="12">
+    <tspan x="486" dy="0">Frame 5000?</tspan>
+  </text>
+  <text x="486" y="224" fill="#8b949e" font-size="12.5">
+    <tspan x="486" dy="0">One indexed SQLite query.</tspan>
+    <tspan x="486" dy="24">Returns raw JPEG bytes —</tspan>
+    <tspan x="486" dy="24">ready for PIL, numpy, or any</tspan>
+    <tspan x="486" dy="24">vision model.</tspan>
+  </text>
+  <text x="486" y="316" fill="#6e7681" font-size="11.5" font-style="italic">No codec. No seek penalty. No decoding.</text>
+
+  <!-- Time badge -->
+  <rect x="486" y="340" width="160" height="32" rx="8" fill="#2ed57312" stroke="#2ed57333" stroke-width="1"/>
+  <text x="508" y="361" fill="#2ed573" font-size="18" font-weight="700">~2ms</text>
+  <text x="556" y="360" fill="#6e7681" font-size="11">/ frame</text>
+  <text x="620" y="361" fill="#2ed573" font-size="12" font-weight="700" filter="url(#glow)">60x faster</text>
+
+  <!-- VS divider -->
+  <circle cx="450" cy="232" r="18" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="450" y="237" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="700">VS</text>
+</svg>

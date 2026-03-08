@@ -28,9 +28,7 @@ import json
 import time
 from pathlib import Path
 
-# Resolve vhlib from same directory as this script
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from vhlib import VHFile
+from .vhlib import VHFile
 
 
 def cmd_info(args):
@@ -102,7 +100,7 @@ def cmd_info(args):
 
 def cmd_convert(args):
     """Convert MP4 to VH."""
-    from convert_optimized import convert
+    from .convert_optimized import convert
     convert(
         args.input,
         args.output,
@@ -115,7 +113,7 @@ def cmd_convert(args):
 
 def cmd_play(args):
     """Play VH file."""
-    from vh_play import play
+    from .vh_play import play
     play(args.file, args.player, args.start, args.end)
 
 
@@ -273,7 +271,7 @@ def cmd_embed(args):
 
 def cmd_viewer(args):
     """Open visual frame browser."""
-    from vh_viewer import VHViewer
+    from .vh_viewer import VHViewer
     VHViewer(args.file, args.start)
 
 

@@ -22,8 +22,6 @@ import tempfile
 import collections
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 try:
     import tkinter as tk
 except ImportError:
@@ -36,7 +34,7 @@ except ImportError:
     print("Pillow required: pip install Pillow")
     sys.exit(1)
 
-from vhlib import VHFile
+from .vhlib import VHFile
 
 # ─────────────────────────────────────────────────────────
 # Design System — Liquid

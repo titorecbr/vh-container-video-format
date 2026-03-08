@@ -4,15 +4,35 @@
 
 VH is a video container format that stores every frame as an individually addressable image inside a SQLite database. Unlike traditional video formats (MP4, MKV, WebM) that require sequential decoding through a codec pipeline, VH gives you **O(1) random access to any frame** — the exact access pattern that AI/ML workloads need.
 
+<p align="center">
+  <img src="docs/comparison.svg" alt="Traditional Video vs VH Format comparison" width="900"/>
+</p>
+
+## Installation
+
+```bash
+pip install vh-video-container
 ```
-                    Traditional Video              VH Format
-                    ─────────────────              ─────────
-                    MP4 → demux → decode →         SELECT image_data
-                    seek is expensive              FROM frames
-                    frame N requires               WHERE frame_id = N
-                    decoding from nearest           ↓
-                    keyframe                       raw JPEG bytes, instant
+
+After installing, the `vh` CLI is available globally:
+
+```bash
+vh info video.vh
+vh convert input.mp4 output.vh
+vh play video.vh
 ```
+
+And the Python library can be imported directly:
+
+```python
+from vh_video_container import VHFile, VHStream
+```
+
+### Requirements
+
+- **Python 3.8+**
+- **ffmpeg / ffprobe** — required for video conversion, audio extraction, and playback
+- **tkinter** — required for the viewer (`apt install python3-tk` on Debian/Ubuntu)
 
 ## Why VH Exists
 
@@ -69,7 +89,7 @@ This turns a VH file into a **self-contained dataset** — the video and all its
 Run any Python function across all frames with built-in batching, progress tracking, and automatic annotation storage:
 
 ```python
-from vhlib import VHFile
+from vh_video_container import VHFile
 
 def classify(image_bytes):
     """Your model inference here."""
@@ -87,7 +107,7 @@ with VHFile('video.vh', mode='a') as vh:
 Or from the CLI:
 
 ```bash
-./vh analyze video.vh --fn mymodule.classify --batch 16 --key classification
+vh analyze video.vh --fn mymodule.classify --batch 16 --key classification
 ```
 
 ### Vector Embeddings
@@ -119,7 +139,7 @@ thumb_bytes = vh.get_thumbnail(frame_id=0)
 `VHStream` loads only the frame index on open — frame data is fetched on demand:
 
 ```python
-from vh_stream import VHStream
+from vh_video_container import VHStream
 
 stream = VHStream('video.vh', prefetch=8)  # background read-ahead
 
@@ -142,13 +162,13 @@ Extract portions of video without re-encoding:
 
 ```bash
 # Slice frames 1000-2000 into a new .vh file (instant, no re-encoding)
-./vh slice video.vh -o clip.vh -s 1000 -e 2000
+vh slice video.vh -o clip.vh -s 1000 -e 2000
 
 # Export back to MP4 (re-encodes via ffmpeg)
-./vh export video.vh -o output.mp4
+vh export video.vh -o output.mp4
 
 # Extract a single frame
-./vh extract video.vh -f 500 -o frame.jpg
+vh extract video.vh -f 500 -o frame.jpg
 ```
 
 ### Audio
@@ -294,7 +314,7 @@ Build requires: `gcc`, `libvlccore-dev`, `libvlc-dev`, `libsqlite3-dev`
 ## Python API Quick Start
 
 ```python
-from vhlib import VHFile
+from vh_video_container import VHFile
 
 # Read
 with VHFile('video.vh', mode='r') as vh:
