@@ -20,6 +20,7 @@ Commands:
   vh doc-list <file.vh> [-f N]                    List attached documents
   vh doc-extract <file.vh> <ID> [-o out]          Extract document
   vh doc-del  <file.vh> <ID>                      Delete document
+  vh generate "prompt" -o out.vh [--backend svd]  Generate AI video
 """
 
 import sys
@@ -483,6 +484,113 @@ def cmd_doc_del(args):
     vh.close()
 
 
+def cmd_generate(args):
+    """Generate video from AI model and save as VH."""
+    from PIL import Image
+    import io
+
+    if not args.prompt and not args.image:
+        print("Error: provide a prompt, --image, or both.")
+        sys.exit(1)
+
+    # Lazy import — only loads torch/diffusers when actually used
+    from vh_video_container.generate import get_backend
+    from vh_video_container.generate.base import GenerateRequest
+
+    backend = get_backend(args.backend)
+
+    # Load conditioning image if provided
+    cond_image = None
+    if args.image:
+        cond_image = Image.open(args.image).convert('RGB')
+
+    # Build extra options (for API backends like Kling)
+    extra = {}
+    if hasattr(args, 'model') and args.model:
+        extra['model'] = args.model
+    if hasattr(args, 'mode') and args.mode:
+        extra['mode'] = args.mode
+    if hasattr(args, 'duration') and args.duration:
+        extra['duration'] = args.duration
+    if hasattr(args, 'negative_prompt') and args.negative_prompt:
+        extra['negative_prompt'] = args.negative_prompt
+    if hasattr(args, 'aspect_ratio') and args.aspect_ratio:
+        extra['aspect_ratio'] = args.aspect_ratio
+
+    # Build request
+    request = GenerateRequest(
+        prompt=args.prompt,
+        image=cond_image,
+        num_frames=args.num_frames,
+        width=args.width,
+        height=args.height,
+        fps=args.fps,
+        seed=args.seed,
+        extra=extra,
+    )
+
+    print(f"Backend: {backend.name()}")
+    print(f"Prompt: {args.prompt or '(image only)'}")
+    if extra.get('model'):
+        print(f"Model: {extra['model']}")
+    if extra.get('mode'):
+        print(f"Mode: {extra['mode']}")
+    if extra.get('duration'):
+        print(f"Duration: {extra['duration']}s per generation")
+    print(f"Chains: {args.chains}")
+
+    vh = VHFile(args.output, mode='w')
+    vh.set_meta('width', args.width)
+    vh.set_meta('height', args.height)
+    vh.set_meta('fps', args.fps)
+    vh.set_meta('source', f'generate:{backend.name()}')
+    if args.prompt:
+        vh.set_meta('prompt', args.prompt)
+    if args.image:
+        vh.set_meta('conditioning_image', Path(args.image).name)
+
+    frame_offset = 0
+    t0 = time.time()
+
+    for chain_idx in range(args.chains):
+        if args.chains > 1:
+            print(f"\n--- Chain {chain_idx + 1}/{args.chains} ---")
+
+        result = backend.generate(request)
+
+        for i, pil_img in enumerate(result.frames):
+            frame_id = frame_offset + i
+            ts_ms = frame_id * (1000.0 / args.fps)
+            buf = io.BytesIO()
+            pil_img.save(buf, format='JPEG', quality=args.quality)
+            vh.add_frame(frame_id, ts_ms, buf.getvalue(), 'jpeg',
+                         pil_img.width, pil_img.height)
+
+        frame_offset += len(result.frames)
+
+        # Chain: use last frame as conditioning for next generation
+        if chain_idx < args.chains - 1:
+            request.image = result.frames[-1]
+
+        vh.commit()
+
+    total_frames = frame_offset
+    elapsed = time.time() - t0
+    vh.set_meta('total_frames', total_frames)
+    vh.set_meta('duration_s', total_frames / args.fps)
+    vh.set_meta('generation_backend', backend.name())
+    if result.seed:
+        vh.set_meta('seed', result.seed)
+    vh.commit()
+    backend.cleanup()
+    vh.close()
+
+    out_size = os.path.getsize(args.output) / (1024 * 1024)
+    print(f"\nDone in {elapsed:.1f}s: {total_frames} frames, "
+          f"{total_frames / args.fps:.1f}s @ {args.fps}fps")
+    print(f"Output: {args.output} ({out_size:.1f} MB)")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog='vh',
@@ -596,6 +704,32 @@ def main():
     p.add_argument('--annotate-source', action='store_true',
                    help='Annotate each frame with its source filename')
 
+    # generate
+    p = subparsers.add_parser('generate', help='Generate AI video')
+    p.add_argument('prompt', nargs='?', default=None, help='Text prompt for generation')
+    p.add_argument('-o', '--output', required=True, help='Output .vh file')
+    p.add_argument('--image', default=None, help='Conditioning image (img2vid)')
+    p.add_argument('--backend', default='svd', help='Generation backend (default: svd)')
+    p.add_argument('--num-frames', type=int, default=25, help='Frames per generation (default: 25)')
+    p.add_argument('--width', type=int, default=1024, help='Width (default: 1024)')
+    p.add_argument('--height', type=int, default=576, help='Height (default: 576)')
+    p.add_argument('--fps', type=int, default=7, help='Output FPS (default: 7)')
+    p.add_argument('--seed', type=int, default=None, help='Random seed')
+    p.add_argument('--quality', type=int, default=90, help='JPEG quality (default: 90)')
+    p.add_argument('--chains', type=int, default=1,
+                   help='Chain multiple generations for longer video (default: 1)')
+    # Kling-specific options (passed via extra dict)
+    p.add_argument('--model', default=None,
+                   help='API model name (e.g. kling-v2-master, kling-v2-1-master)')
+    p.add_argument('--mode', default=None, choices=['std', 'pro'],
+                   help='Quality mode: std (720p) or pro (1080p)')
+    p.add_argument('--duration', type=int, default=None, choices=[5, 10],
+                   help='Video duration per generation in seconds (5 or 10)')
+    p.add_argument('--negative-prompt', default=None,
+                   help='Negative prompt (what to avoid)')
+    p.add_argument('--aspect-ratio', default=None,
+                   help='Aspect ratio (16:9, 9:16, 1:1, 4:3, etc.)')
+
     # doc-add
     p = subparsers.add_parser('doc-add', help='Attach a document to a frame')
     p.add_argument('file', help='Input .vh file')
@@ -641,6 +775,7 @@ def main():
         'viewer': cmd_viewer,
         'analyze': cmd_analyze,
         'import-images': cmd_import_images,
+        'generate': cmd_generate,
         'doc-add': cmd_doc_add,
         'doc-list': cmd_doc_list,
         'doc-extract': cmd_doc_extract,

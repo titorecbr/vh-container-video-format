@@ -202,6 +202,69 @@ vh export output.vh -o output.mp4
 
 This makes VH the bridge between **image generation** and **video analysis** — regardless of where the images come from.
 
+### AI Video Generation
+
+Generate videos directly from text prompts or images using AI models — no external tools, no manual pipeline. VH supports multiple generation backends through a pluggable architecture:
+
+| Backend | Type | Quality | Speed | Best For |
+|---------|------|---------|-------|----------|
+| **SVD** (Stable Video Diffusion) | Local GPU | Good — abstract/artistic motion | ~2 min/chain | Quick prototypes, artistic videos, offline use |
+| **Kling AI** | Cloud API | Excellent — photorealistic, cinematic | ~30-60s/generation | Realistic scenes, human characters, professional quality |
+
+#### Text-to-Video with SVD (local GPU)
+
+```bash
+# Generate a 30-second video from a text prompt (15 chains × 14 frames)
+vh generate "A calm ocean with waves gently rolling onto shore" \
+  -o ocean.vh --backend svd --chains 15 --width 512 --height 320 --seed 42
+
+# Image-to-video: animate an existing image
+vh generate --image photo.jpg -o animated.vh --backend svd --num-frames 25
+```
+
+SVD uses SDXL-Turbo to generate a conditioning image from text, then Stable Video Diffusion to animate it. Optimized for 8GB VRAM GPUs (RTX 3070) with sequential CPU offloading and float16 precision.
+
+#### Photorealistic Video with Kling AI (cloud API)
+
+```bash
+# Set API credentials (get keys at https://klingai.com/global/dev)
+export KLING_ACCESS_KEY=your_access_key
+export KLING_SECRET_KEY=your_secret_key
+
+# Generate cinematic video with realistic humans and environments
+vh generate "A woman walking along a tropical beach at sunset, cinematic lighting" \
+  -o scene.vh --backend kling --model kling-v2-master --mode pro --duration 10
+
+# Animate a reference image
+vh generate "Camera slowly zooming in" \
+  --image reference.jpg -o animated.vh --backend kling --duration 5
+
+# Chain multiple generations for longer videos
+vh generate "A bustling city street at night with neon lights" \
+  -o city.vh --backend kling --mode pro --duration 10 --chains 3 \
+  --aspect-ratio 16:9 --negative-prompt "blurry, low quality"
+```
+
+Kling AI produces photorealistic video with complex scenes, human characters, and cinematic camera movements. Supports up to 1080p (pro mode), 30fps, and 10-second segments that can be chained for longer videos.
+
+#### Adding New Backends
+
+The generation system is built on a pluggable backend architecture. Adding a new backend (Runway, Pika, etc.) requires only:
+
+1. Create `vh_video_container/generate/your_backend.py` implementing `GenerateBackend`
+2. Register it in `vh_video_container/generate/__init__.py`
+
+```python
+from vh_video_container.generate import get_backend, list_backends
+
+# List available backends
+print(list_backends())  # ['svd', 'kling']
+
+# Use programmatically
+backend = get_backend('kling', access_key='...', secret_key='...')
+result = backend.generate(GenerateRequest(prompt="A sunset over mountains", num_frames=150))
+```
+
 ---
 
 ## Installation
@@ -210,18 +273,30 @@ This makes VH the bridge between **image generation** and **video analysis** —
 pip install vh-video-container
 ```
 
+For AI video generation, install the backend you need:
+
+```bash
+# SVD — local GPU generation (requires CUDA GPU with 8GB+ VRAM)
+pip install vh-video-container[generate-svd]
+
+# Kling AI — cloud API generation (no GPU required)
+pip install vh-video-container[generate-kling]
+```
+
 After installing, the `vh` CLI is available globally:
 
 ```bash
 vh info video.vh
 vh convert input.mp4 output.vh
 vh play video.vh
+vh generate "A sunset over the ocean" -o sunset.vh --backend kling
 ```
 
 And the Python library can be imported directly:
 
 ```python
 from vh_video_container import VHFile, VHStream
+from vh_video_container.generate import get_backend
 ```
 
 ### Requirements
@@ -414,16 +489,16 @@ SQLite was chosen deliberately:
 ### Component Map
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                        CLI (./vh)                         │
-│  info │ convert │ play │ slice │ extract │ annotate │ ... │
-└──────┬──────────┬──────┬───────────────────────────┬─────┘
-       │          │      │                           │
-  ┌────▼────┐ ┌───▼────────────┐ ┌─────────────┐ ┌──▼──────────┐
-  │ vhlib   │ │convert_optimized│ │  vh_play    │ │  vh_viewer  │
-  │ VHFile  │ │ ffmpeg pipe     │ │ ffmpeg mux  │ │  tkinter UI │
-  │         │ │ dedup + delta   │ │ vlc/ffplay  │ │  PIL render │
-  └────┬────┘ └────────────────┘  └─────────────┘ └─────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                            CLI (./vh)                                │
+│  info │ convert │ play │ slice │ extract │ annotate │ generate │ ... │
+└──────┬──────────┬──────┬───────────────────────────┬──────┬─────────┘
+       │          │      │                           │      │
+  ┌────▼────┐ ┌───▼────────────┐ ┌─────────────┐ ┌──▼─────────┐ ┌──▼──────────┐
+  │ vhlib   │ │convert_optimized│ │  vh_play    │ │  vh_viewer  │ │  generate/  │
+  │ VHFile  │ │ ffmpeg pipe     │ │ ffmpeg mux  │ │  tkinter UI │ │  svd.py     │
+  │         │ │ dedup + delta   │ │ vlc/ffplay  │ │  PIL render │ │  kling.py   │
+  └────┬────┘ └────────────────┘  └─────────────┘ └─────────────┘ └─────────────┘
        │
   ┌────▼────────┐    ┌──────────────────┐
   │ vh_stream   │    │ vlc-plugin/      │
@@ -440,6 +515,7 @@ SQLite was chosen deliberately:
 - **`vh_viewer.py`** — Full-featured video player built with tkinter. Anti-aliased UI via PIL 2x supersampling. Background frame prefetch pipeline. Audio playback via ffplay. Timeline with annotation markers.
 - **`vh_play.py`** — Lightweight playback. Extracts frames to temp directory, muxes AVI with ffmpeg, opens in VLC/ffplay/mpv.
 - **`vlc-plugin/vh_demux.c`** — Native VLC demuxer in C. Opens the SQLite database directly, reads JPEG frames and feeds them to VLC as MJPEG. Supports seeking by position and time. Handles ref frames by following pointers. Enables `vlc file.vh` to just work.
+- **`generate/`** — Pluggable AI video generation backends. `base.py` defines the abstract `GenerateBackend` interface with `GenerateRequest`/`GenerateResult` dataclasses. `svd.py` implements local GPU generation via Stable Video Diffusion with SDXL-Turbo text-to-image conditioning. `kling.py` implements cloud API generation via Kling AI with JWT authentication, async task polling, and MP4-to-frames extraction. New backends are registered in `__init__.py` with lazy imports.
 - **`analyze.py`** — Standalone analysis tool that profiles a VH file for optimization opportunities: frame size distribution, duplicate detection, near-duplicate analysis, JPEG vs WebP comparison, SQLite overhead.
 
 ## CLI Reference
@@ -476,6 +552,20 @@ vh import-images <dir|file> -o out.vh          Import images into VH
               --quality N                        JPEG quality 1-100 (default: 90)
               --resize WxH                       Resize to WIDTHxHEIGHT
               --annotate-source                  Tag each frame with source filename
+vh generate "prompt" -o out.vh                  Generate AI video from text/image
+              --backend svd|kling                Generation backend (default: svd)
+              --image FILE                       Conditioning image (image-to-video)
+              --num-frames N                     Frames per generation (default: 25)
+              --width N --height N               Output dimensions
+              --fps N                            Output FPS (default: 7)
+              --seed N                           Random seed for reproducibility
+              --quality N                        JPEG quality (default: 90)
+              --chains N                         Chain generations for longer video
+              --model NAME                       API model (e.g. kling-v2-master)
+              --mode std|pro                     Quality mode: std (720p) or pro (1080p)
+              --duration 5|10                    Seconds per generation (Kling)
+              --negative-prompt TEXT             What to avoid in generation
+              --aspect-ratio RATIO              Aspect ratio (16:9, 9:16, 1:1, etc.)
 ```
 
 ## VH Viewer
@@ -559,9 +649,11 @@ with VHFile('output.vh', mode='w') as vh:
 | Python 3 | Yes | Core runtime |
 | sqlite3 | Yes (stdlib) | Storage engine |
 | ffmpeg / ffprobe | Yes | Video conversion, audio extraction, playback |
-| Pillow | For delta/viewer | Image decoding, thumbnails, viewer rendering |
+| Pillow | For delta/viewer/generate | Image decoding, thumbnails, viewer rendering |
 | numpy | For delta/viewer | Delta frame XOR operations, pixel access |
 | tkinter | For viewer | GUI framework |
+| torch, diffusers, transformers, accelerate | For SVD generation | Local GPU video generation |
+| PyJWT, requests | For Kling generation | Kling AI API authentication and requests |
 | gcc, libvlccore-dev, libvlc-dev, libsqlite3-dev | For VLC plugin | Native plugin compilation |
 
 ## Performance

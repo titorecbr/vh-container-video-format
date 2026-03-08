@@ -35,6 +35,9 @@ dependencies = [
 
 [project.optional-dependencies]
 viewer = ["Pillow"]
+generate = ["torch", "diffusers>=0.25.0", "transformers", "accelerate", "safetensors", "Pillow"]
+generate-svd = ["torch", "diffusers>=0.25.0", "transformers", "accelerate", "safetensors", "Pillow"]
+generate-kling = ["PyJWT", "requests", "Pillow"]
 
 [project.urls]
 Homepage = "https://github.com/titorecbr/vh-container-video-format"
