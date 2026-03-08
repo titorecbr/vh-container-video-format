@@ -12,10 +12,77 @@ VH is a video container format that stores every frame as an individually addres
 
 ## See It In Action
 
-This 20-second video was **generated entirely with Python** — no ffmpeg, no video codecs, no external assets. Every frame was rendered with Pillow and written directly into a `.vh` file using the `VHFile` API. The result is a fully playable, annotated, AI-ready video container.
+These videos were **generated entirely by an AI agent** (Claude Code) from a single prompt each — no human code, no ffmpeg, no video codecs. The AI wrote the full rendering pipeline and assembled everything into `.vh` files using the library's own API. Every frame is individually addressable, annotated, and queryable.
+
+### Beach Sunset — 60 seconds, golden hour to night
 
 <p align="center">
-  <img src="docs/demo_badge.svg" alt="AI-Generated Video Demo Stats" width="900"/>
+  <img src="docs/beach_badge.svg" alt="Beach Sunset Demo Stats" width="900"/>
+</p>
+
+<p align="center">
+  <img src="docs/beach_showcase.jpg" alt="Beach Sunset — 5 phases from golden hour to night" width="900"/>
+</p>
+
+<p align="center">
+  <img src="docs/beach_filmstrip.jpg" alt="Beach sunset filmstrip across all phases" width="900"/>
+</p>
+
+<details>
+<summary><strong>The prompt</strong></summary>
+
+This was the exact, unedited prompt given to [Claude Code](https://claude.ai/code):
+
+```
+Generate a 60-second video of a beach with the sunset transitioning into night,
+using the VH format features to create a demo of the vh cli.
+```
+
+From this single sentence, the AI produced:
+- A full rendering engine with sky gradient interpolation across 5 color stops
+- Sun with glow, descent animation, and water reflection
+- 8 clouds that change color as the sun sets (white to orange to purple to dark)
+- 6 palm trees with trunk curvature, frond droop physics, and wind sway
+- 12 birds in V-formation that disappear at nightfall
+- Ocean with 6 wave layers, foam line, and shore animation
+- 150 stars that fade in during twilight with individual twinkle rates
+- Moon that rises with crater detail and water reflection
+- 6 annotated phase markers (golden_hour, sunset, deep_sunset, twilight, night, night_end)
+- Per-phase descriptions and light level metadata
+
+**1440 frames. 80 MB. One prompt. Zero human code.**
+
+</details>
+
+<details>
+<summary><strong>Reproduce it yourself</strong></summary>
+
+```bash
+pip install vh-video-container Pillow
+python examples/generate_beach_sunset.py
+
+# Play it
+vh viewer beach_sunset.vh
+
+# Inspect it
+vh info beach_sunset.vh
+
+# Search annotated phases
+vh search beach_sunset.vh -k phase
+vh search beach_sunset.vh -k phase -v night
+
+# Extract a frame
+vh extract beach_sunset.vh -f 720 -o deep_sunset.jpg
+```
+
+Or give the same prompt to any LLM with access to `vh-video-container` and see what it creates.
+
+</details>
+
+### Night City — 20 seconds, 18 animated people
+
+<p align="center">
+  <img src="docs/demo_badge.svg" alt="Night City Demo Stats" width="900"/>
 </p>
 
 <p align="center">
@@ -23,49 +90,21 @@ This 20-second video was **generated entirely with Python** — no ffmpeg, no vi
 </p>
 
 <p align="center">
-  <img src="docs/demo_filmstrip.jpg" alt="Timeline filmstrip showing frames across the video" width="900"/>
+  <img src="docs/demo_filmstrip.jpg" alt="Night city filmstrip" width="900"/>
 </p>
 
 <details>
-<summary><strong>How it was made (30 lines)</strong></summary>
+<summary><strong>The prompt</strong></summary>
 
-```python
-from vh_video_container import VHFile
-from PIL import Image, ImageDraw
-import io
-
-with VHFile("night_city.vh", mode="w") as vh:
-    vh.set_meta("width", 1280)
-    vh.set_meta("height", 720)
-    vh.set_meta("fps", 24)
-
-    for i in range(480):
-        # Render frame: city skyline, street lights, walking people
-        img = Image.new("RGB", (1280, 720), (13, 17, 23))
-        draw = ImageDraw.Draw(img)
-        draw_buildings(draw, i)
-        draw_people(draw, i)
-        draw_lights(draw, img, i)
-
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=90)
-        vh.add_frame(i, (i / 24) * 1000, buf.getvalue(), "jpeg", 1280, 720)
-
-    # Annotate key moments — searchable metadata built into the file
-    vh.annotate(0, "scene", "night_city_intro")
-    vh.annotate(0, "people_count", 18)
-    vh.annotate(240, "scene", "midpoint")
-    vh.commit()
-
-# Result: 62 MB self-contained video with annotations
-# Open it:  vh viewer night_city.vh
-# Query it: vh search night_city.vh -k scene
 ```
+Generate a slightly longer video with images of people
+```
+
+The AI built an urban night scene with 16 buildings (flickering windows, antennas), 6 street lights with ground glow, and 18 walking people — each with unique skin tone, clothing, walking animation with arm/leg physics, and depth-sorted rendering. 480 frames, 62 MB.
 
 </details>
 
-> **Try it yourself** — the full generation script is in [`examples/generate_people.py`](examples/generate_people.py).
-> Run it with `python examples/generate_people.py` and open the result with `vh viewer night_city.vh`.
+> **Full scripts:** [`examples/generate_beach_sunset.py`](examples/generate_beach_sunset.py) | [`examples/generate_people.py`](examples/generate_people.py)
 
 ---
 
