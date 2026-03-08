@@ -533,6 +533,8 @@ vh play     <file.vh>                          Play VH file
 vh slice    <file.vh> -o out.vh -s N -e N      Extract frame range
 vh extract  <file.vh> -f N -o frame.jpg        Extract single frame
 vh annotate <file.vh> -f N -k KEY -v VALUE     Add annotation
+vh edit-ann <file.vh> -f N -k KEY -v VALUE    Edit an existing annotation
+vh del-ann  <file.vh> -f N [-k KEY]           Delete annotation(s) from frame
 vh search   <file.vh> -k KEY [-v VALUE]        Search annotations
 vh export   <file.vh> -o output.mp4            Export to MP4
               --fps N                            Output FPS
@@ -566,6 +568,10 @@ vh generate "prompt" -o out.vh                  Generate AI video from text/imag
               --duration 5|10                    Seconds per generation (Kling)
               --negative-prompt TEXT             What to avoid in generation
               --aspect-ratio RATIO              Aspect ratio (16:9, 9:16, 1:1, etc.)
+vh doc-add  <file.vh> <doc> [-f N] [-d DESC]  Attach document to a frame
+vh doc-list <file.vh> [-f N]                  List attached documents
+vh doc-extract <file.vh> <ID> [-o out]        Extract document from VH file
+vh doc-del  <file.vh> <ID>                    Delete document from VH file
 ```
 
 ## VH Viewer
