@@ -641,6 +641,11 @@ def _register_linux():
             f.write(f'#!/bin/bash\nexec {python_exec} -m vh_video_container.cli viewer "$@"\n')
         os.chmod(launcher, 0o755)
 
+    # Build Exec line: use explicit Python path to avoid Deepin's debFix.sh
+    # overriding the shebang interpreter with system Python
+    python_exec = sys.executable
+    exec_line = f'{python_exec} {launcher} viewer %f'
+
     # MIME type with icon
     mime_xml = mime_dir / 'application-x-vh-video.xml'
     mime_xml.write_text(
@@ -661,7 +666,7 @@ def _register_linux():
         'Type=Application\n'
         'Name=VH Video Viewer\n'
         'Comment=Open VH video container files\n'
-        f'Exec={launcher} viewer %f\n'
+        f'Exec={exec_line}\n'
         f'Icon={_ICON_NAME}\n'
         'Terminal=false\n'
         'Categories=AudioVideo;Video;Player;\n'
