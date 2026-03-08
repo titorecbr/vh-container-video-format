@@ -889,6 +889,12 @@ class VHFile:
 
     def close(self):
         self._conn.commit()
+        # Clean up WAL/SHM temp files so they don't clutter the directory
+        try:
+            self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self._conn.execute("PRAGMA journal_mode=DELETE")
+        except Exception:
+            pass
         self._conn.close()
 
     def __enter__(self):
