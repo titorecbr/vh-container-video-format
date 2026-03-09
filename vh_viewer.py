@@ -1312,6 +1312,10 @@ class VHViewer:
         self._fullscreen = False
         self._osd_items = []
         self._osd_after = None
+        self._last_highlighted_fid = None   # track last-passed annotation
+        self._pan_x = 0                     # pan offset (pixels)
+        self._pan_y = 0
+        self._pan_drag_start = None
 
         self.pipeline = FramePipeline(self.vh, buffer_size=20)
         self.audio = AudioPlayer(self.vh)
@@ -1651,6 +1655,9 @@ class VHViewer:
         self.root.bind('<p>', lambda e: self._toggle_ann_panel())
         self.canvas.bind('<Button-4>', lambda e: self._zoom_in())
         self.canvas.bind('<Button-5>', lambda e: self._zoom_out())
+        self.canvas.bind('<ButtonPress-1>', self._pan_start)
+        self.canvas.bind('<B1-Motion>', self._pan_drag)
+        self.canvas.bind('<ButtonRelease-1>', self._pan_end)
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -1666,8 +1673,8 @@ class VHViewer:
             return
 
         self.canvas.delete('vid')
-        cx = self.canvas.winfo_width() // 2
-        cy = self.canvas.winfo_height() // 2
+        cx = self.canvas.winfo_width() // 2 + self._pan_x
+        cy = self.canvas.winfo_height() // 2 + self._pan_y
         self.canvas.create_image(cx, cy, image=photo, anchor=tk.CENTER, tags='vid')
         self.canvas._photo = photo
 
@@ -1832,12 +1839,50 @@ class VHViewer:
     def _zoom_in(self):
         self.zoom = min(3.0, self.zoom * 1.15)
         self.pipeline.invalidate_zoom()
+        self._clamp_pan()
         self._display_frame(self.current_frame)
 
     def _zoom_out(self):
         self.zoom = max(0.1, self.zoom / 1.15)
         self.pipeline.invalidate_zoom()
+        self._clamp_pan()
         self._display_frame(self.current_frame)
+
+    # ── Pan (drag when zoomed) ──
+
+    def _pan_start(self, e):
+        img_w = self.width * self.zoom
+        img_h = self.height * self.zoom
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+        if img_w > cw + 2 or img_h > ch + 2:
+            self._pan_drag_start = (e.x - self._pan_x, e.y - self._pan_y)
+            self.canvas.config(cursor='fleur')
+
+    def _pan_drag(self, e):
+        if self._pan_drag_start is None:
+            return
+        self._pan_x = e.x - self._pan_drag_start[0]
+        self._pan_y = e.y - self._pan_drag_start[1]
+        self._clamp_pan()
+        cx = self.canvas.winfo_width() // 2 + self._pan_x
+        cy = self.canvas.winfo_height() // 2 + self._pan_y
+        self.canvas.coords('vid', cx, cy)
+
+    def _pan_end(self, e):
+        if self._pan_drag_start is not None:
+            self._pan_drag_start = None
+            self.canvas.config(cursor='')
+
+    def _clamp_pan(self):
+        img_w = self.width * self.zoom
+        img_h = self.height * self.zoom
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+        max_x = max(0, (img_w - cw) / 2)
+        max_y = max(0, (img_h - ch) / 2)
+        self._pan_x = max(-max_x, min(max_x, self._pan_x))
+        self._pan_y = max(-max_y, min(max_y, self._pan_y))
 
     # ── Audio ──
 
@@ -2037,6 +2082,7 @@ class VHViewer:
         for _, widget in self._ann_items:
             widget.destroy()
         self._ann_items = []
+        self._last_highlighted_fid = None
 
         # Fetch all annotations grouped by frame
         rows = self.vh._conn.execute(
@@ -2155,13 +2201,13 @@ class VHViewer:
             key_row = tk.Frame(ann_block, bg=CARD_BG)
             key_row.pack(fill=tk.X)
 
+            # Action buttons — pack first so they always get space
+            btn_bar = tk.Frame(key_row, bg=CARD_BG)
+            btn_bar.pack(side=tk.RIGHT)
+
             tk.Label(key_row, text=f"\u25cf  {key}",
                      fg=CLR_KEY, bg=CARD_BG,
                      font=FONT_UI_BOLD).pack(side=tk.LEFT)
-
-            # Action buttons — visible contrast
-            btn_bar = tk.Frame(key_row, bg=CARD_BG)
-            btn_bar.pack(side=tk.RIGHT)
 
             del_btn = tk.Label(btn_bar, text=" \U0001F5D1 ", fg=CLR_BTN,
                                bg=CLR_BTN_BG, font=FONT_ACTION_SM,
@@ -2302,23 +2348,40 @@ class VHViewer:
         return wrapper
 
     def _highlight_current_annotation(self):
-        """Highlight the annotation card for the current frame."""
+        """Highlight the last-passed annotation card (fid <= current_frame)."""
         if not self._ann_panel_visible:
             return
 
+        # Find the last annotation with fid <= current_frame
+        last_passed_fid = None
+        for fid, _w in self._ann_items:
+            if fid is not None and fid <= self.current_frame:
+                last_passed_fid = fid
+
+        # Only update UI when the highlighted annotation changes
+        if last_passed_fid == self._last_highlighted_fid:
+            return
+
+        prev_fid = self._last_highlighted_fid
+        self._last_highlighted_fid = last_passed_fid
+
         for fid, wrapper in self._ann_items:
-            is_current = fid is not None and fid == self.current_frame
-            if hasattr(wrapper, '_card_border'):
-                if is_current:
-                    wrapper._card_border.config(bg=C['accent'])
-                    for child in wrapper._card_border.winfo_children():
-                        if isinstance(child, tk.Frame):
-                            self._set_card_bg_safe(child, '#142840')
-                else:
-                    wrapper._card_border.config(bg='#2a2a3a')
-                    for child in wrapper._card_border.winfo_children():
-                        if isinstance(child, tk.Frame):
-                            self._set_card_bg_safe(child, '#1e1e2a')
+            if not hasattr(wrapper, '_card_border'):
+                continue
+            if fid == last_passed_fid:
+                wrapper._card_border.config(bg=C['accent'])
+                for child in wrapper._card_border.winfo_children():
+                    if isinstance(child, tk.Frame):
+                        self._set_card_bg_safe(child, '#142840')
+            elif fid == prev_fid:
+                wrapper._card_border.config(bg='#2a2a3a')
+                for child in wrapper._card_border.winfo_children():
+                    if isinstance(child, tk.Frame):
+                        self._set_card_bg_safe(child, '#1e1e2a')
+
+        # Auto-scroll to the newly highlighted annotation
+        if last_passed_fid is not None:
+            self._scroll_to_annotation(last_passed_fid)
 
     def _set_card_bg_safe(self, widget, bg):
         """Set bg recursively, skip action buttons."""
